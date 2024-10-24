@@ -1,7 +1,6 @@
-import express from 'express';
 import db from './db/db_connect';
+import app from "./app";
 
-const app = express();
 
 db.$client.connect() // Access the pool via db.$client
   .then(client => {
