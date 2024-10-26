@@ -2,8 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import userRouter from './routes/user.routes';
+import { Express } from 'express';
 
-const app = express();
+const app: Express = express();
 
 app.use(cors({
     origin: '*', 
