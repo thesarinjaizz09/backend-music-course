@@ -7,7 +7,6 @@ import ApiError from "../utils/ApiError";
 import { comparePassword, hashPassword } from "../utils/passwordUtils";
 import { v4 as uuidv4 } from "uuid";
 import ApiResponse from "../utils/ApiResponse";
-import { ZodError } from "zod";
 import { LoginInput } from "../schemas/loginSchema";
 import {
   generateAccessToken,
@@ -141,6 +140,29 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
   );
 });
 
+const logoutUser = asyncHandler(async (req: Request, res: Response) => {
+  // get refresh token from cookies
+  // check if the refresh token exists
+  // delete the refresh token from the database
+  // clear access and refresh token cookies
+  // send response
+  const refreshToken = req.cookies?.refreshToken;
+  if(!refreshToken){
+    throw new ApiError(400, "Refresh token is missing");
+  }
+
+  await db.delete(RefreshTokens).where(eq(RefreshTokens.token, refreshToken));
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+  };
+
+  res.clearCookie("accessToken", cookieOptions);
+  res.clearCookie("refreshToken", cookieOptions);
+
+  res.status(200).json(new ApiResponse(200, null, "User logged out successfully"));
+});
+
 const refreshAccessToken = async (req: Request, res: Response) => {
   const { refreshToken } = req.cookies;
 
@@ -227,4 +249,4 @@ const refreshAccessToken = async (req: Request, res: Response) => {
   }
 };
 
-export { registerUser, loginUser, refreshAccessToken };
+export { registerUser, loginUser, refreshAccessToken, logoutUser };
