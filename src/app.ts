@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import userRouter from './routes/user.routes';
@@ -15,8 +15,8 @@ app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
-app.get("/api/hello", (req, res) => {
-    res.send("Welcome to the API");
+app.get("/api/hello", (req:Request, res:Response) => {
+    res.json("Welcome to the API");
 });
 app.use("/api/v1/users", userRouter);
 

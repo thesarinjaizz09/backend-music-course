@@ -1,5 +1,6 @@
 import db from './db/db_connect';
 import app from "./app";
+import { Request, Response } from 'express';
 
 
 db.$client.connect() // Access the pool via db.$client
@@ -15,6 +16,6 @@ db.$client.connect() // Access the pool via db.$client
     console.error('Database connection error:', error);
   });
 
-  app.get("/",(req,res)=>{
+  app.get("/",(req: Request,res: Response)=>{
     res.json("Welcome to the API");
   });

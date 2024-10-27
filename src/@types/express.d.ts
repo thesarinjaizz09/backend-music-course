@@ -6,3 +6,8 @@ declare module 'express-serve-static-core' {
         user?: User | JwtPayload; 
     }
 }
+
+declare module 'cors';
+declare module 'cookie-parser';
+declare module 'jsonwebtoken';
+declare module 'uuid';
