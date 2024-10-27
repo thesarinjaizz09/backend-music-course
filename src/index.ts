@@ -14,3 +14,7 @@ db.$client.connect() // Access the pool via db.$client
   .catch(error => {
     console.error('Database connection error:', error);
   });
+
+  app.get("/",(req,res)=>{
+    res.json("Welcome to the API");
+  });
