@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "lint": "tsc",
     "start": "node ./dist/index.js",
-    "dev": "nodemon ./src/index.ts"
+    "dev": "nodemon ./src/index.ts",
+    "build": "tsc --noEmit && esbuild src/index.ts --bundle --platform=node --outdir=dist --minify --target=es2022"
   },
   "author": "",
   "license": "ISC",
