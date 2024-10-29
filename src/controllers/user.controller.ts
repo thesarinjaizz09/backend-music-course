@@ -115,7 +115,8 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
   // Set cookie options (include secure only in production)
   const cookieOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: true, // Always set to true
+    sameSite: 'strict' as const, // Corrected to lowercase
   };
   res.cookie("accessToken", accessToken, {
     ...cookieOptions,
@@ -154,7 +155,8 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
   await db.delete(RefreshTokens).where(eq(RefreshTokens.token, refreshToken));
   const cookieOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: true, // Always set to true
+    sameSite: 'strict' as const, // Corrected to lowercase
   };
 
   res.clearCookie("accessToken", cookieOptions);
@@ -214,8 +216,8 @@ const refreshAccessToken = async (req: Request, res: Response) => {
     // Cookie options for secure storage
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict" as const,
+      secure: true, // Always set to true
+      sameSite: 'strict' as const, // Corrected to lowercase
     };
 
     // Set cookies with the new tokens
