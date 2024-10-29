@@ -6,7 +6,8 @@
     "lint": "tsc",
     "start": "node ./dist/index.js",
     "dev": "nodemon ./src/index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "postinstall": "drizzle-kit generate"
   },
   "author": "",
   "license": "ISC",
