@@ -83,62 +83,72 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
   // access and refresh token generation
   // send cookies
   // send response
-  const { email, password }: LoginInput = req.body; //user data
-  if (!email || !password) {
-    throw new ApiError(400, "Email and password are required");
-  }
-  // find the user
-  const user = await db
-    .select()
-    .from(Users)
-    .where(eq(Users.email, email))
-    .limit(1);
-  if (user.length === 0) {
-    throw new ApiError(404, "User not found");
-  }
-  // password check
-  const isPasswordValid = await comparePassword(password, user[0].password);
-  if (!isPasswordValid) {
-    throw new ApiError(401, "Invalid credentials");
-  }
-  // access and refresh token generation
-  const accessToken = generateAccessToken(user[0].id);
-  const refreshToken = generateRefreshToken(user[0].id);
-
-  // store refresh token in the database with expiration time
-  await db.insert(RefreshTokens).values({
-    token: refreshToken,
-    userId: user[0].id,
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-  });
-
-  // Set cookie options (include secure only in production)
-  const cookieOptions = {
-    httpOnly: true,
-    secure: true, // Always set to true
-    sameSite: 'strict' as const, // Corrected to lowercase
-  };
-  res.cookie("accessToken", accessToken, {
-    ...cookieOptions,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-  });
-  res.cookie("refreshToken", refreshToken, {
-    ...cookieOptions,
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  });
-  // Exclude sensitive fields from the response user object
-  const { password: _, ...userWithoutPassword } = user[0];
-  res.status(200).json(
-    new ApiResponse(
-      200,
-      {
-        user: userWithoutPassword,
-        accessToken,
-        refreshToken,
-      },
-      "User logged in successfully"
-    )
-  );
+ try {
+   const { email, password }: LoginInput = req.body; //user data
+   if (!email || !password) {
+     throw new ApiError(400, "Email and password are required");
+   }
+   // find the user
+   const user = await db
+     .select()
+     .from(Users)
+     .where(eq(Users.email, email))
+     .limit(1);
+   if (user.length === 0) {
+     throw new ApiError(404, "User not found");
+   }
+   // password check
+   const isPasswordValid = await comparePassword(password, user[0].password);
+   if (!isPasswordValid) {
+     throw new ApiError(401, "Invalid credentials");
+   }
+ 
+    // Exclude sensitive fields from the response user object
+   const { password: _,createdAt, updatedAt, ...userWithoutPassword } = user[0];
+   // access and refresh token generation
+   const accessToken = generateAccessToken(userWithoutPassword);
+   const refreshToken = generateRefreshToken(userWithoutPassword);
+   
+   // store refresh token in the database with expiration time
+   await db.insert(RefreshTokens).values({
+     token: refreshToken,
+     userId: user[0].id,
+     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+   });
+ 
+   // Set cookie options (include secure only in production)
+   const cookieOptions = {
+     httpOnly: true,
+     secure: true, // Always set to true
+     sameSite: 'strict' as const, // Corrected to lowercase
+   };
+   res.cookie("accessToken", accessToken, {
+     ...cookieOptions,
+     maxAge: 24 * 60 * 60 * 1000, // 24 hours
+   });
+   res.cookie("refreshToken", refreshToken, {
+     ...cookieOptions,
+     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+   });
+   
+   res.status(200).json(
+     new ApiResponse(
+       200,
+       {
+         user: userWithoutPassword,
+         accessToken,
+         refreshToken,
+       },
+       "User logged in successfully"
+     )
+   );
+ } catch (error) {
+  console.dir(error);
+   if (error instanceof ApiError) {
+     throw error;
+   }
+   throw new ApiError(500, "An error occurred while logging in the user");
+ }
 });
 
 const logoutUser = asyncHandler(async (req: Request, res: Response) => {
@@ -250,5 +260,7 @@ const refreshAccessToken = async (req: Request, res: Response) => {
       );
   }
 };
+
+
 
 export { registerUser, loginUser, refreshAccessToken, logoutUser };

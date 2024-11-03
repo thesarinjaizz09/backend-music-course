@@ -1,12 +1,13 @@
 import jwt from 'jsonwebtoken';
+import { UserWithoutPassword } from '../@types/types';
 
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET as string;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET as string;
 
 // Generate Access Token
-export const generateAccessToken = (userId: string): string => {
+export const generateAccessToken = (user: UserWithoutPassword): string => {
     return jwt.sign(
-        { userId }, 
+        { user }, 
         ACCESS_TOKEN_SECRET, 
         {
             expiresIn: process.env.ACCESS_TOKEN_EXPIRATION,
@@ -15,9 +16,9 @@ export const generateAccessToken = (userId: string): string => {
 };
 
 // Generate Refresh Token
-export const generateRefreshToken = (userId: string): string => {
+export const generateRefreshToken = (user: UserWithoutPassword): string => {
     return jwt.sign(
-        { userId }, 
+        { user }, 
         REFRESH_TOKEN_SECRET, 
         {
             expiresIn: process.env.REFRESH_TOKEN_EXPIRATION,

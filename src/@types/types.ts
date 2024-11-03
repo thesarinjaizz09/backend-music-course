@@ -19,16 +19,21 @@ export type VimeoFolder = {
   }
   
   export type VimeoVideo = {
-    uri: string;              // URI to identify the video, e.g., "/videos/{video_id}"
+    uri: string;              // Video URI
     name: string;             // Video title
     description?: string;     // Video description
     duration: number;         // Duration in seconds
     pictures: {
-      sizes: { width: number; height: number; link: string }[]; // Array of thumbnail sizes
+      sizes: { width: number; height: number; link: string }[]; 
     };
     link: string;             // Direct link to the video on Vimeo
     embed: {
-      html: string;           // Embed HTML for the video player
+      html: string;          
     };
-    // Add other fields from the Vimeo API response as needed
+  }
+
+  export type UserWithoutPassword = {
+    email: string;
+    id: string;
+    username: string;
   }

@@ -4,7 +4,7 @@ import { Users } from './user.model';
 // Define refreshTokens table with the given properties
 export const RefreshTokens = pgTable('refresh_tokens', {
   id: serial('id').primaryKey(),
-  token: varchar('token', { length: 255 }).notNull(),
+  token: varchar('token', { length: 512 }).notNull(),
   userId: uuid('user_id')
     .notNull()
     .references(() => Users.id),  // Foreign key reference to Users table

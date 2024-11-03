@@ -25,7 +25,7 @@ const verifyJWT = asyncHandler(async (req: Request, res: Response, next: NextFun
         const user = await db
         .select()
         .from(Users)
-        .where(eq(Users.id,decodedToken.userId))
+        .where(eq(Users.id,decodedToken.user.id))
         .limit(1)
         .then(rows => rows[0]);
 
