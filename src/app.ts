@@ -3,6 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import userRouter from './routes/user.routes';
 import { Express } from 'express';
+import moduleRouter from './routes/module.routes';
 
 const app: Express = express();
 
@@ -19,5 +20,6 @@ app.get("/api/hello", (req:Request, res:Response) => {
     res.json("Welcome to the API");
 });
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/modules", moduleRouter);
 
 export default app;

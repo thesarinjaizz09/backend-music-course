@@ -117,6 +117,7 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-drizzle.json
+
 drizzle
+.drizzle/meta
 # End of https://mrkandreev.name/snippets/gitignore-generator/#Node

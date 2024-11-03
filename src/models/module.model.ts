@@ -1,20 +1,18 @@
-import { pgTable, uuid, text, varchar, numeric } from 'drizzle-orm/pg-core';
-import { Courses } from './course.model'; 
+import { pgTable, uuid, text, varchar } from 'drizzle-orm/pg-core';
+
 
 // A table named 'modules' that contains modules for courses
 export const Modules = pgTable('modules', {
   id: uuid('id').primaryKey(),
-  courseId: uuid('course_id').references(() => Courses.id).notNull(),
-  moduleTitle: varchar('module_title', { length: 255 }).notNull(),
-  moduleContent: text('module_content').notNull(),
-  price: numeric('price', { precision: 10, scale: 2 }).notNull(), // Including price with two decimal places
+  vimeo_module_id: varchar('vimeo_module_id').unique().notNull(),
+  title: varchar('title', { length: 255 }).notNull(),  // Title of the module
+  description: text('description'), // Optional description
 });
 
-// TypeScript interface for the Modules table
-export interface Module {
+// Module type
+export type Module = {
   id: string;
-  courseId: string;
-  moduleTitle: string;
-  moduleContent: string;
-  price: number;
+  vimeo_module_id: string;
+  title: string;
+  description?: string;
 }
