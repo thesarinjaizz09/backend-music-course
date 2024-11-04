@@ -262,5 +262,4 @@ const refreshAccessToken = async (req: Request, res: Response) => {
 };
 
 
-
 export { registerUser, loginUser, refreshAccessToken, logoutUser };

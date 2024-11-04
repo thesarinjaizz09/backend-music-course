@@ -119,19 +119,16 @@ const fetchAndStoreAllModules = asyncHandler(async (req: Request, res: Response,
         throw new ApiError(500, "VIMEO_USER_ID is not configured in environment variables.");
     }
     try {
-        console.log("starting.....");
         const foldersResponse = await vimeoAPI.get<{ data: VimeoFolder[] }>(`/users/${VIMEO_USER_ID}/projects`);
         const vimeoFolders = foldersResponse.data.data;
-        console.dir(vimeoFolders);
+        
+        const existingModules = await db.select().from(Modules).execute();
+        const existingModuleIds = new Set(existingModules.map(module => module.vimeo_module_id));
+
         const modulesData: Module[] = [];
         for(const folder of vimeoFolders){
             const moduleId = folder.uri.split("/").pop();
-            if(!moduleId){
-                continue;
-            }
-
-            const existingModule = await db.select().from(Modules).where(eq(Modules.vimeo_module_id, moduleId)).execute();
-            if(existingModule.length > 0){
+            if(!moduleId || existingModuleIds.has(moduleId)){
                 continue;
             }
 
@@ -150,11 +147,12 @@ const fetchAndStoreAllModules = asyncHandler(async (req: Request, res: Response,
             });
         }
 
+        const allModules = [...existingModules, ...modulesData];
         res.status(200).json({
             statusCode: 200,
             message: "Modules fetched and stored successfully",
             success: true,
-            data: modulesData,
+            data: allModules,
         });
     } catch (error) {
         console.dir(error);
