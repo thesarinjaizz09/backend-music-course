@@ -5,7 +5,7 @@ import { VimeoFolder, VimeoVideo } from "../@types/types";
 import { v4 as uuidv4 } from "uuid"
 import ApiError from "../utils/ApiError";
 import db from "../db/db_connect";
-import { Modules } from "../models/module.model";
+import { Module, Modules } from "../models/module.model";
 import { VideoSchema } from "../schemas/videoSchema";
 import { Videos } from "../models/video.model";
 import { eq } from "drizzle-orm";
@@ -13,7 +13,7 @@ import { eq } from "drizzle-orm";
 
 const VIMEO_USER_ID = process.env.VIMEO_USER_ID;
 
-export const fetchAndStoreModule = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+const fetchAndStoreModule = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     // get the moduleId from the request
     // check if the module exists in the database
     // if the module exists, fetch the videos from the database and return them
@@ -22,7 +22,7 @@ export const fetchAndStoreModule = asyncHandler(async (req: Request, res: Respon
     // store the module and videos in the database
    
     try {
-        const { moduleId } = await req.params;
+        const { moduleId } = req.params;
         if (!VIMEO_USER_ID) {
             throw new ApiError(500, "VIMEO_USER_ID is not configured in environment variables.");
         }
@@ -106,3 +106,66 @@ export const fetchAndStoreModule = asyncHandler(async (req: Request, res: Respon
         }
     }
 })
+
+//to fetch all the modules from the vimeo server
+const fetchAndStoreAllModules = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    //chech if the vimeo userId is available
+    //fetch all the folders from the vimeo server
+    //for each module, check if it exists in the database
+    //if it does not exist, store it in the database
+    //send a response
+    console.log("Entering");
+    if(!VIMEO_USER_ID){
+        throw new ApiError(500, "VIMEO_USER_ID is not configured in environment variables.");
+    }
+    try {
+        console.log("starting.....");
+        const foldersResponse = await vimeoAPI.get<{ data: VimeoFolder[] }>(`/users/${VIMEO_USER_ID}/projects`);
+        const vimeoFolders = foldersResponse.data.data;
+        console.dir(vimeoFolders);
+        const modulesData: Module[] = [];
+        for(const folder of vimeoFolders){
+            const moduleId = folder.uri.split("/").pop();
+            if(!moduleId){
+                continue;
+            }
+
+            const existingModule = await db.select().from(Modules).where(eq(Modules.vimeo_module_id, moduleId)).execute();
+            if(existingModule.length > 0){
+                continue;
+            }
+
+            const moduleData = {
+                id: uuidv4(),
+                vimeo_module_id: moduleId,
+                title: folder.name,
+                description: folder.description || '',
+            }
+            modulesData.push(moduleData);
+        }
+
+        if(modulesData.length > 0){
+            await db.transaction(async (tx) => {
+                await tx.insert(Modules).values(modulesData);
+            });
+        }
+
+        res.status(200).json({
+            statusCode: 200,
+            message: "Modules fetched and stored successfully",
+            success: true,
+            data: modulesData,
+        });
+    } catch (error) {
+        console.dir(error);
+        if (error instanceof Error) {
+            next(new ApiError(500, error.message));
+        } else {
+            next(new ApiError(500, "An unknown error occurred"));
+        }
+        
+    }
+});
+
+
+export {fetchAndStoreModule, fetchAndStoreAllModules};

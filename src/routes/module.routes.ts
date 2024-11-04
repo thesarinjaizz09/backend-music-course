@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { fetchAndStoreModule } from "../controllers/module.controller";
+import { fetchAndStoreAllModules, fetchAndStoreModule } from "../controllers/module.controller";
 
 const router = Router();
 
+router.get('/fetchAll', fetchAndStoreAllModules);
 router.get('/:moduleId', fetchAndStoreModule);
 
 export default router;
