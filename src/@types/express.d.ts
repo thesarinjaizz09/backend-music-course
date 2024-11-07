@@ -6,4 +6,3 @@ declare module 'express-serve-static-core' {
         user?: User | JwtPayload; 
     }
 }
-

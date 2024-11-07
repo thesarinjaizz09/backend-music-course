@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { SignupInput, signUpSchema } from "../schemas/signUpSchema";
+import { signUpSchema } from "../schemas/signUpSchema";
 import db from "../db/db_connect";
 import { Users } from "../models/user.model";
 import { eq, sql } from "drizzle-orm";
@@ -7,7 +7,7 @@ import ApiError from "../utils/ApiError";
 import { comparePassword, hashPassword } from "../utils/passwordUtils";
 import { v4 as uuidv4 } from "uuid";
 import ApiResponse from "../utils/ApiResponse";
-import { LoginInput } from "../schemas/loginSchema";
+import { loginSchema } from "../schemas/loginSchema";
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -15,6 +15,15 @@ import {
 } from "../utils/tokenUtils";
 import { RefreshTokens } from "../models/refreshTokens.model";
 import asyncHandler from "../utils/asyncHandler";
+import z from "zod";
+import { changePasswordSchema } from "../schemas/changePasswordSchema";
+
+// Cookie options for secure storage
+const cookieOptions = {
+  httpOnly: true,
+  secure: true, // Always set to true
+  sameSite: 'strict' as const, // Corrected to lowercase
+};
 
 const registerUser = asyncHandler(async (req: Request, res: Response) => {
   // get user details from frontend
@@ -24,55 +33,74 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
   // save user to db
   // check for user creation
   // send response
-  const userData: SignupInput = req.body; // user data
-  // validation
-  const validatedData = signUpSchema.parse(userData);
-  //check if user exists
-  const existingUser = await db
-    .select()
-    .from(Users)
-    .where(eq(Users.email, validatedData.email))
-    .limit(1);
+  try {
+   
+    // Validate user input
+    const validatedData = signUpSchema.parse(req.body);
 
-  if (existingUser.length > 0) {
-    throw new ApiError(409, "User already exists");
+    const existingUser = await db
+      .select()
+      .from(Users)
+      .where(eq(Users.email, validatedData.email))
+      .limit(1);
+  
+    if (existingUser.length > 0) {
+      throw new ApiError(409, "User already exists");
+    }
+   
+    const hashedPassword = await hashPassword(validatedData.password);
+  
+    const newUser = await db
+      .insert(Users)
+      .values({
+        id: uuidv4(),
+        username: validatedData.username,
+        email: validatedData.email,
+        password: hashedPassword,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+  
+    const savedUser = await db
+      .select()
+      .from(Users)
+      .where(eq(Users.id, newUser[0].id))
+      .limit(1);
+    if (savedUser.length === 0) {
+      throw new ApiError(500, "An error occurred while registering the user");
+    }
+    // Exclude sensitive fields from the response user object
+    const { password: _, ...userWithoutPassword } = savedUser[0];
+    res
+      .status(201)
+      .json(
+        new ApiResponse(
+          200,
+          { user: userWithoutPassword },
+          "User created successfully"
+        )
+      );
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({
+        success: false,
+        message: error.errors[0].message,
+      });
+    }
+
+    if (error instanceof ApiError) {
+      res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while registering the user",
+    });
   }
-  // hash password
-  const hashedPassword = await hashPassword(validatedData.password);
-
-  // save user to db
-  const newUser = await db
-    .insert(Users)
-    .values({
-      id: uuidv4(),
-      username: validatedData.username,
-      email: validatedData.email,
-      password: hashedPassword,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .returning();
-
-  // Check if the user was successfully saved in the database
-  const savedUser = await db
-    .select()
-    .from(Users)
-    .where(eq(Users.id, newUser[0].id))
-    .limit(1);
-  if (savedUser.length === 0) {
-    throw new ApiError(500, "An error occurred while registering the user");
-  }
-  // Exclude sensitive fields from the response user object
-  const { password: _, ...userWithoutPassword } = savedUser[0];
-  res
-    .status(201)
-    .json(
-      new ApiResponse(
-        200,
-        { user: userWithoutPassword },
-        "User created successfully"
-      )
-    );
 });
 
 const loginUser = asyncHandler(async (req: Request, res: Response) => {
@@ -84,16 +112,14 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
   // send cookies
   // send response
  try {
-   const { email, password }: LoginInput = req.body; //user data
-   if (!email || !password) {
-     throw new ApiError(400, "Email and password are required");
-   }
+   const { email, password } = loginSchema.parse(req.body);
    // find the user
    const user = await db
      .select()
      .from(Users)
      .where(eq(Users.email, email))
      .limit(1);
+
    if (user.length === 0) {
      throw new ApiError(404, "User not found");
    }
@@ -103,9 +129,10 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
      throw new ApiError(401, "Invalid credentials");
    }
  
-    // Exclude sensitive fields from the response user object
+  
    const { password: _,createdAt, updatedAt, ...userWithoutPassword } = user[0];
-   // access and refresh token generation
+
+   
    const accessToken = generateAccessToken(userWithoutPassword);
    const refreshToken = generateRefreshToken(userWithoutPassword);
    
@@ -116,12 +143,6 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
    });
  
-   // Set cookie options (include secure only in production)
-   const cookieOptions = {
-     httpOnly: true,
-     secure: true, // Always set to true
-     sameSite: 'strict' as const, // Corrected to lowercase
-   };
    res.cookie("accessToken", accessToken, {
      ...cookieOptions,
      maxAge: 24 * 60 * 60 * 1000, // 24 hours
@@ -143,12 +164,17 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
      )
    );
  } catch (error) {
-  console.dir(error);
-   if (error instanceof ApiError) {
-     throw error;
-   }
-   throw new ApiError(500, "An error occurred while logging in the user");
- }
+    if (error instanceof z.ZodError) {
+      res.status(400).json({
+        success: false,
+        message: error.errors[0].message,
+      });
+    }
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(500, "An error occurred while logging in the user");
+  }
 });
 
 const logoutUser = asyncHandler(async (req: Request, res: Response) => {
@@ -163,11 +189,6 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
   }
 
   await db.delete(RefreshTokens).where(eq(RefreshTokens.token, refreshToken));
-  const cookieOptions = {
-    httpOnly: true,
-    secure: true, // Always set to true
-    sameSite: 'strict' as const, // Corrected to lowercase
-  };
 
   res.clearCookie("accessToken", cookieOptions);
   res.clearCookie("refreshToken", cookieOptions);
@@ -175,11 +196,11 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json(new ApiResponse(200, null, "User logged out successfully"));
 });
 
-const refreshAccessToken = async (req: Request, res: Response) => {
+const refreshAccessToken = asyncHandler(async (req: Request, res: Response) => {
   const { refreshToken } = req.cookies;
 
   if (!refreshToken) {
-    return res.status(401).json(new ApiError(401, "Unauthorized request"));
+    throw new ApiError(401, "Unauthorized request");
   }
 
   try {
@@ -189,7 +210,7 @@ const refreshAccessToken = async (req: Request, res: Response) => {
       !valid ||
       !decoded ||
       typeof decoded !== "object" ||
-      !("userId" in decoded)
+      !(decoded.user.id)
     ) {
       throw new ApiError(403, "Invalid refresh token");
     }
@@ -210,25 +231,18 @@ const refreshAccessToken = async (req: Request, res: Response) => {
     }
 
     // Generate a new access token and refresh token
-    const newAccessToken = generateAccessToken(decoded.userId);
-    const newRefreshToken = generateRefreshToken(decoded.userId);
+    const newAccessToken = generateAccessToken(decoded.user.id);
+    const newRefreshToken = generateRefreshToken(decoded.user.id);
 
     // Store new refresh token in the database
     await db.insert(RefreshTokens).values({
       token: newRefreshToken,
-      userId: decoded.userId,
+      userId: decoded.user.id,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days expiration
     });
 
     // Delete the old refresh token from the database
     await db.delete(RefreshTokens).where(eq(RefreshTokens.token, refreshToken));
-
-    // Cookie options for secure storage
-    const cookieOptions = {
-      httpOnly: true,
-      secure: true, // Always set to true
-      sameSite: 'strict' as const, // Corrected to lowercase
-    };
 
     // Set cookies with the new tokens
     res.cookie("accessToken", newAccessToken, {
@@ -240,26 +254,75 @@ const refreshAccessToken = async (req: Request, res: Response) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     }); // 7 days
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          { accessToken: newAccessToken, refreshToken: newRefreshToken },
-          "Access token refreshed successfully"
-        )
-      );
+    res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { accessToken: newAccessToken, refreshToken: newRefreshToken },
+        "Access token refreshed successfully"
+      )
+    );
   } catch (error) {
     if (error instanceof ApiError) {
-      return res.status(error.statusCode).json(error);
+      res.status(error.statusCode).json({
+        statusCode: error.statusCode,
+        message: error.message, // Explicitly include error message here
+        success: false,
+      });
+    } else {
+      res
+        .status(500)
+        .json({
+          statusCode: 500,
+          message: "An error occurred while refreshing the access token",
+          success: false,
+        });
     }
-    return res
-      .status(500)
-      .json(
-        new ApiError(500, "An error occurred while refreshing the access token")
-      );
   }
-};
+});
 
+const changePassword = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new ApiError(401, "User not authenticated");
+  }
+  try {
+    const { oldPassword, newPassword } = changePasswordSchema.parse(req.body);
 
-export { registerUser, loginUser, refreshAccessToken, logoutUser };
+    const user = await db
+      .select()
+      .from(Users)
+      .where(eq(Users.id, userId))
+      .limit(1);
+
+    if(user.length === 0) {
+      throw new ApiError(404, "User not found");
+    }
+
+    const isPasswordValid = await comparePassword(oldPassword, user[0].password);
+    if (!isPasswordValid) {
+      throw new ApiError(401, "Invalid credentials");
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    await db.update(Users).set({ password: hashedPassword }).where(eq(Users.id, userId));
+
+    res.status(200).json(new ApiResponse(200, null, "Password changed successfully"));
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({
+        success: false,
+        message: error.errors[0].message,
+      });
+    }
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(500, "An error occurred while changing the password");
+    
+  }
+});
+
+export { registerUser, loginUser, refreshAccessToken, logoutUser,changePassword};

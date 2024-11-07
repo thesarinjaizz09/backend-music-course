@@ -37,3 +37,24 @@ export type VimeoFolder = {
     id: string;
     username: string;
   }
+
+  //extra for future use
+//   export type VimeoFolder = {
+//     id: string;
+//     name: string;
+//     description?: string;
+// };
+
+// export type VimeoVideo = {
+//     id: string;
+//     name: string;
+//     description?: string;
+//     duration: number;
+//     thumbnail_url: string;
+//     vimeo_url: string;
+// };
+
+// export type VimeoData = {
+//     folder: VimeoFolder;
+//     videos: VimeoVideo[];
+// };

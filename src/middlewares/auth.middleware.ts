@@ -6,6 +6,9 @@ import db from '../db/db_connect';
 import { Users, User } from '../models/user.model';
 import { eq } from 'drizzle-orm';
 
+
+
+
 const verifyJWT = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     // Get the token from cookies or headers
     // Check if the token exists
@@ -32,11 +35,8 @@ const verifyJWT = asyncHandler(async (req: Request, res: Response, next: NextFun
         if (!user) {
             return next(new ApiError(401, "Invalid Access Token"));
         }
-
-       
-    // if (user) {
-    //     req.user = { id: user.id, username: user.username, email: user.email } as User;
-    // }
+        req.user = { id: user.id, username: user.username, email: user.email } as User;
+        
 
         next();
     } catch (err) {
