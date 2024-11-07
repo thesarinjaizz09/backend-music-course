@@ -12,3 +12,12 @@ export const VideoSchema = z.object({
 });
 
 export type VideoSchemaType = z.infer<typeof VideoSchema>;
+
+export const ModuleSchema = z.object({
+  id: z.string(),
+  vimeo_module_id: z.string(),
+  title: z.string(),
+  description: z.string().nullable().optional(),
+});
+
+export type ModuleSchemaType = z.infer<typeof ModuleSchema>;
