@@ -22,4 +22,4 @@ async function pollVimeoForUpdates(){
     }
 }
 // Run the pollVimeoForUpdates function every 6 hours
-cron.schedule('0 */6 * * *', pollVimeoForUpdates);
+cron.schedule('*/2 * * * *', pollVimeoForUpdates);
