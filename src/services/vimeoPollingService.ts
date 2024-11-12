@@ -13,10 +13,18 @@ async function pollVimeoForUpdates(){
         const modules = await db.select().from(Modules).execute();
         for(const module of modules) {
             const moduleId = module.vimeo_module_id;
-            const vimeoData = await fetchModuleAndVideosFromVimeo(moduleId);
-            await syncDatabaseWithVimeoData(moduleId, vimeoData);
+            try {
+                const vimeoData = await fetchModuleAndVideosFromVimeo(moduleId);
+                await db.transaction(async (trx) => {
+                    await syncDatabaseWithVimeoData(moduleId, vimeoData, trx);
+                });
+                console.log(`Module ${moduleId} synced successfully.`);
+            } catch (error) {
+                console.error(`Error syncing module ${moduleId}:`, error);
+            }
+           
         }
-        console.log('Vimeo updates polled successfully');
+        console.log('All Vimeo updates polled successfully');
     } catch (error) {
         console.error("Error in Vimeo sync job", error);
     }

@@ -92,16 +92,21 @@ const fetchAndStoreAllModules = asyncHandler(async (req: Request, res: Response,
 const fetchModuleAndVideosFromVimeo = async (moduleId: string) => {
     //fetch the module and videos from the vimeo server
     //return the data
-    const folderResponse = await vimeoAPI.get<VimeoFolder>(`/users/${VIMEO_USER_ID}/projects/${moduleId}`);
-    const vimeoFolder = folderResponse.data;
-    
-    const videosResponse = await vimeoAPI.get<{ data: VimeoVideo[] }>(`/users/${VIMEO_USER_ID}/projects/${moduleId}/videos`);
-    const videos = videosResponse.data.data;
-    
-    return {vimeoFolder, videos};
+    try {
+        const folderResponse = await vimeoAPI.get<VimeoFolder>(`/users/${VIMEO_USER_ID}/projects/${moduleId}`);
+        const vimeoFolder = folderResponse.data;
+        
+        const videosResponse = await vimeoAPI.get<{ data: VimeoVideo[] }>(`/users/${VIMEO_USER_ID}/projects/${moduleId}/videos`);
+        const videos = videosResponse.data.data;
+        
+        return {vimeoFolder, videos};
+    } catch (error) {
+        console.error(`Error fetching data from Vimeo for module ${moduleId}:`, error);
+        throw error;
+    }
 };
 
-const syncDatabaseWithVimeoData = async (moduleId: string, vimeoData: {vimeoFolder: VimeoFolder; videos: VimeoVideo[]}) => {
+const syncDatabaseWithVimeoData = async (moduleId: string, vimeoData: {vimeoFolder: VimeoFolder; videos: VimeoVideo[]}, trx: any) => {
     // decode vimeo folder and videos from vimeo data
     // create module data
     // check if the module exists in the database
@@ -120,19 +125,24 @@ const syncDatabaseWithVimeoData = async (moduleId: string, vimeoData: {vimeoFold
         description: vimeoFolder.description || '',
     };
     // Validate module data
-    const parsedModuleData = ModuleSchema.parse(moduleData);
+    const parsedModuleData = ModuleSchema.safeParse(moduleData);
 
-    const existingModule = await db.select().from(Modules).where(eq(Modules.vimeo_module_id, moduleId)).execute();
+    if (!parsedModuleData.success) {
+        console.error(`Module data validation failed for ${moduleId}:`, parsedModuleData.error);
+        return;
+    }
+
+    const existingModule = await trx.select().from(Modules).where(eq(Modules.vimeo_module_id, moduleId)).execute();
 
     if (existingModule.length > 0) {
-        await db.update(Modules).set(parsedModuleData).where(eq(Modules.vimeo_module_id, moduleId)).execute();
+        await trx.update(Modules).set(parsedModuleData).where(eq(Modules.vimeo_module_id, moduleId)).execute();
     } else {
-        await db.insert(Modules).values(parsedModuleData).execute();
+        await trx.insert(Modules).values(parsedModuleData).execute();
     }
     for (const video of videos) {
         const videoData: VideoSchemaType = {
             video_id: video.uri.split("/").pop()!,
-            module_id: parsedModuleData.id,
+            module_id: parsedModuleData.data.id,
             title: video.name,
             description: video.description,
             duration: video.duration,
@@ -141,14 +151,19 @@ const syncDatabaseWithVimeoData = async (moduleId: string, vimeoData: {vimeoFold
         };
 
         // Validate video data
-        const parsedVideoData = VideoSchema.parse(videoData);
+        const parsedVideoData = VideoSchema.safeParse(videoData);
+        if (!parsedVideoData.success) {
+            console.error(`Video data validation failed for video ${videoData.video_id}:`, parsedVideoData.error);
+            continue; // Skip this video if validation fails
+        }
 
-        const existingVideo = await db.select().from(Videos).where(eq(Videos.video_id, parsedVideoData.video_id)).execute();
+        const existingVideo = await trx.select().from(Videos).where(eq(Videos.video_id, parsedVideoData.data.video_id)).execute();
+
 
         if (existingVideo.length > 0) {
-            await db.update(Videos).set(parsedVideoData).where(eq(Videos.video_id, parsedVideoData.video_id)).execute();
+            await trx.update(Videos).set(parsedVideoData.data).where(eq(Videos.video_id, parsedVideoData.data.video_id)).execute();
         } else {
-            await db.insert(Videos).values(parsedVideoData).execute();
+            await trx.insert(Videos).values(parsedVideoData.data).execute();
         }
     }
 };
