@@ -1,5 +1,5 @@
 
-export type VimeoFolder = {
+type VimeoFolder = {
     uri: string;              // The URI for the folder (used for API requests)
     name: string;             // The name/title of the folder
     description: string;      // A description of the folder
@@ -18,7 +18,7 @@ export type VimeoFolder = {
     };
   }
   
-  export type VimeoVideo = {
+type VimeoVideo = {
     uri: string;              // Video URI
     name: string;             // Video title
     description?: string;     // Video description
@@ -30,13 +30,13 @@ export type VimeoFolder = {
     embed: {
       html: string;          
     };
-  }
+}
 
-  export type UserWithoutPassword = {
+type UserWithoutPassword = {
     email: string;
     id: string;
     username: string;
-  }
+}
 
   //extra for future use
 //   export type VimeoFolder = {
@@ -58,3 +58,24 @@ export type VimeoFolder = {
 //     folder: VimeoFolder;
 //     videos: VimeoVideo[];
 // };
+
+type UserProfileData = {
+    id: string;
+    username: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: Date | null;
+    gender: string | null;
+    registeredAt: Date;
+    enrolledModules: Array<{
+      moduleId: string;
+      title: string;
+      description: string;
+      enrollmentDate: Date;
+      progress: string;
+      completed: boolean;
+    }>;
+};
+
+export { VimeoFolder, VimeoVideo, UserWithoutPassword, UserProfileData };

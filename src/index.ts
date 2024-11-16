@@ -1,6 +1,7 @@
 import db from './db/db_connect';
 import app from "./app";
 import { Request, Response } from 'express';
+import './services/vimeoPollingService';
 
 const port = process.env.PORT || 4000;
 

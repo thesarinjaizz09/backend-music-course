@@ -7,12 +7,13 @@ import ApiError from "../utils/ApiError";
 import db from "../db/db_connect";
 import { Module, Modules } from "../models/module.model";
 import { ModuleSchema, VideoSchema, VideoSchemaType } from "../schemas/videoAndModuleSchema";
-import { Videos } from "../models/video.model";
+import { Video, Videos } from "../models/video.model";
 import { eq } from "drizzle-orm";
+import axios from "axios";
 
 
 const VIMEO_USER_ID = process.env.VIMEO_USER_ID;
-
+//to fetch all videos from  modules
 const fetchAndStoreModule = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     //fetch the moduleId from the request params
     //check if the module exists in the database
@@ -57,7 +58,7 @@ const fetchAndStoreModule = asyncHandler(async (req: Request, res: Response, nex
 });
 
 
-//to fetch all the modules from the vimeo server
+//to fetch all the modules from the database
 const fetchAndStoreAllModules = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     //fetch all the modules from the database
     //if no modules are found, respond with a warning message
@@ -88,84 +89,178 @@ const fetchAndStoreAllModules = asyncHandler(async (req: Request, res: Response,
     }
 });
 
+const fetchAllModulesFromVimeo = async () => {
+    //fetch all the modules from the vimeo server
+    //return the data
+    try {
+        const foldersResponse = await vimeoAPI.get<{ data: VimeoFolder[] }>(`/users/${VIMEO_USER_ID}/projects`);
+        const vimeoFolders = foldersResponse.data.data;
+        if (!vimeoFolders || vimeoFolders.length === 0) {
+            console.warn('No modules found on Vimeo');
+        }
+        // Extract only the required properties for each module
+        const modulesData = vimeoFolders.map(folder => ({
+            vimeo_module_id: folder.uri.split("/").pop()!,
+        }));
+        return modulesData;
+    } catch (error) {
+        console.error('Error fetching modules from Vimeo:', error);
+        throw new Error('Failed to fetch modules from Vimeo');
+    }
+}
 
-const fetchModuleAndVideosFromVimeo = async (moduleId: string) => {
+const fetchModuleAndVideosFromVimeo = async (moduleId: string,existingModuleId?: string) => {
     //fetch the module and videos from the vimeo server
     //return the data
     try {
         const folderResponse = await vimeoAPI.get<VimeoFolder>(`/users/${VIMEO_USER_ID}/projects/${moduleId}`);
         const vimeoFolder = folderResponse.data;
-        
+        const module: Module = {
+            id:  existingModuleId || uuidv4(),
+            vimeo_module_id: moduleId,
+            title: vimeoFolder.name,
+            description: vimeoFolder.description || '',
+        };
+
         const videosResponse = await vimeoAPI.get<{ data: VimeoVideo[] }>(`/users/${VIMEO_USER_ID}/projects/${moduleId}/videos`);
-        const videos = videosResponse.data.data;
-        
-        return {vimeoFolder, videos};
+        const videosData = videosResponse.data.data;
+        if (!videosData || videosData.length === 0) {
+            console.warn(`No videos found for module ${moduleId}`);
+        }
+
+        const videos: Omit<Video, 'id'>[] = videosData.map((video: any) => ({
+            video_id: video.uri.split("/").pop(),
+            module_id: module.id,
+            title: video.name,
+            description: video.description || "",
+            duration: video.duration,
+            thumbnail_url: video.pictures.sizes[0]?.link || "",
+            vimeo_url: video.link,
+        }))
+        return {module, videos};
     } catch (error) {
         console.error(`Error fetching data from Vimeo for module ${moduleId}:`, error);
         throw error;
     }
 };
 
-const syncDatabaseWithVimeoData = async (moduleId: string, vimeoData: {vimeoFolder: VimeoFolder; videos: VimeoVideo[]}, trx: any) => {
-    // decode vimeo folder and videos from vimeo data
-    // create module data
-    // check if the module exists in the database
-    // if it exists, update the module data
-    // otherwise insert the module data
-    // for each video, create video data
-    // check if the video exists in the database
-    // if it exists, update the video data
-    // otherwise insert the video data
-    const { vimeoFolder, videos } = vimeoData;
 
-    const moduleData: Module = {
-        id: uuidv4(),
-        vimeo_module_id: moduleId,
-        title: vimeoFolder.name,
-        description: vimeoFolder.description || '',
-    };
-    // Validate module data
-    const parsedModuleData = ModuleSchema.safeParse(moduleData);
-
-    if (!parsedModuleData.success) {
-        console.error(`Module data validation failed for ${moduleId}:`, parsedModuleData.error);
-        return;
-    }
-
-    const existingModule = await trx.select().from(Modules).where(eq(Modules.vimeo_module_id, moduleId)).execute();
-
-    if (existingModule.length > 0) {
-        await trx.update(Modules).set(parsedModuleData).where(eq(Modules.vimeo_module_id, moduleId)).execute();
-    } else {
-        await trx.insert(Modules).values(parsedModuleData).execute();
-    }
-    for (const video of videos) {
-        const videoData: VideoSchemaType = {
-            video_id: video.uri.split("/").pop()!,
-            module_id: parsedModuleData.data.id,
-            title: video.name,
-            description: video.description,
-            duration: video.duration,
-            thumbnail_url: video.pictures.sizes[0]?.link,
-            vimeo_url: video.link,
-        };
-
-        // Validate video data
-        const parsedVideoData = VideoSchema.safeParse(videoData);
-        if (!parsedVideoData.success) {
-            console.error(`Video data validation failed for video ${videoData.video_id}:`, parsedVideoData.error);
-            continue; // Skip this video if validation fails
+const syncDatabaseWithVimeoData = async (moduleId: string, vimeoModule: Module, vimeoVideos: Omit<Video, "id">[]) => {
+    //fetch the module from database
+    try {
+        const module = await db.select().from(Modules).where(eq(Modules.vimeo_module_id, moduleId)).execute();
+    
+        // 1. Check if  module data has changed
+        const moduleUpdated = vimeoModule.title !== module[0].title || vimeoModule.description !== module[0].description;
+        if(moduleUpdated) {
+            await db.update(Modules)
+            .set({ title: vimeoModule.title, description: vimeoModule.description})
+            .where(eq(Modules.vimeo_module_id, moduleId))
+            .execute();
         }
-
-        const existingVideo = await trx.select().from(Videos).where(eq(Videos.video_id, parsedVideoData.data.video_id)).execute();
-
-
-        if (existingVideo.length > 0) {
-            await trx.update(Videos).set(parsedVideoData.data).where(eq(Videos.video_id, parsedVideoData.data.video_id)).execute();
-        } else {
-            await trx.insert(Videos).values(parsedVideoData.data).execute();
+        // 2. Check  for new or  deleted videos
+        const dbVideos = await db.select().from(Videos).where(eq(Videos.module_id, module[0].id)).execute();
+        const dbVideoIds = dbVideos.map(video => video.video_id);
+    
+        // New videos
+        const newVideos = vimeoVideos.filter(video => !dbVideoIds.includes(video.video_id));
+        for(const video of newVideos) {
+            const videoData = {
+                video_id: video.video_id,
+                module_id: module[0].id,
+                title: video.title,
+                description: video.description,
+                duration: video.duration,
+                thumbnail_url: video.thumbnail_url,
+                vimeo_url: video.vimeo_url,
+            }
+            await db.insert(Videos).values(videoData).execute();
         }
+    
+        // Deleted videos
+        const deletedVideos = dbVideos.filter(dbVideo => !vimeoVideos.some(video => video.video_id === dbVideo.video_id));
+        for (const video of deletedVideos) {
+            await db.delete(Videos).where(eq(Videos.video_id, video.video_id)).execute();
+        }
+    
+        // 3. Check for updated videos
+        for(const video of vimeoVideos) {
+            const videoId = video.video_id;
+            const existingVideo = dbVideos.find(dbVideo => dbVideo.video_id === videoId);
+            if(existingVideo) {
+                const videoUpdated = existingVideo.title !== video.title || existingVideo.description !== video.description || existingVideo.duration !== video.duration || existingVideo.thumbnail_url !== video.thumbnail_url || existingVideo.vimeo_url !== video.vimeo_url;
+                if(videoUpdated){
+                    const videoData = {
+                        title: video.title,
+                        description: video.description,
+                        duration: video.duration,
+                        thumbnail_url: video.thumbnail_url,
+                        vimeo_url: video.vimeo_url,
+                    };
+                    await db.update(Videos).set(videoData).where(eq(Videos.video_id, videoId)).execute();
+                }
+            }
+        }
+    } catch (error) {
+        console.error(`Error syncing module '${moduleId}' with Vimeo data:`, error);
     }
 };
 
-export {fetchAndStoreModule, fetchAndStoreAllModules, fetchModuleAndVideosFromVimeo, syncDatabaseWithVimeoData};
+
+//to fetch all the modules from the vimeo server
+const testfetchAndStoreAllModules = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    //chech if the vimeo userId is available
+    //fetch all the folders from the vimeo server
+    //for each module, check if it exists in the database
+    //if it does not exist, store it in the database
+    //send a response
+    console.log("Entering");
+    if(!VIMEO_USER_ID){
+        throw new ApiError(500, "VIMEO_USER_ID is not configured in environment variables.");
+    }
+    try {
+        console.log("starting.....");
+        const foldersResponse = await vimeoAPI.get<{ data: VimeoFolder[] }>(`/users/${VIMEO_USER_ID}/projects`);
+        const vimeoFolders = foldersResponse.data.data;
+        console.dir(vimeoFolders);
+        const modulesData: Module[] = [];
+        for(const folder of vimeoFolders){
+            const moduleId = folder.uri.split("/").pop();
+            if(!moduleId){
+                continue;
+            }
+            const existingModule = await db.select().from(Modules).where(eq(Modules.vimeo_module_id, moduleId)).execute();
+            if(existingModule.length > 0){
+                continue;
+            }
+            const moduleData = {
+                id: uuidv4(),
+                vimeo_module_id: moduleId,
+                title: folder.name,
+                description: folder.description || '',
+            }
+            modulesData.push(moduleData);
+        }
+        if(modulesData.length > 0){
+            await db.transaction(async (tx) => {
+                await tx.insert(Modules).values(modulesData);
+            });
+        }
+        res.status(200).json({
+            statusCode: 200,
+            message: "Modules fetched and stored successfully",
+            success: true,
+            data: modulesData,
+        });
+    } catch (error) {
+        console.dir(error);
+        if (error instanceof Error) {
+            next(new ApiError(500, error.message));
+        } else {
+            next(new ApiError(500, "An unknown error occurred"));
+        }
+        
+    }
+});
+
+export {fetchAndStoreModule, fetchAndStoreAllModules, fetchModuleAndVideosFromVimeo, syncDatabaseWithVimeoData, fetchAllModulesFromVimeo, testfetchAndStoreAllModules};
