@@ -65,8 +65,8 @@ type UserProfileData = {
     email: string;
     firstName: string;
     lastName: string;
-    dateOfBirth: Date | null;
-    gender: string | null;
+    dateOfBirth: Date;
+    gender: string ;
     registeredAt: Date;
     enrolledModules: Array<{
       moduleId: string;

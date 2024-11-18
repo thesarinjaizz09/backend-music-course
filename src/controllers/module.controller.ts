@@ -9,7 +9,7 @@ import { Module, Modules } from "../models/module.model";
 import { ModuleSchema, VideoSchema, VideoSchemaType } from "../schemas/videoAndModuleSchema";
 import { Video, Videos } from "../models/video.model";
 import { eq } from "drizzle-orm";
-import axios from "axios";
+
 
 
 const VIMEO_USER_ID = process.env.VIMEO_USER_ID;
