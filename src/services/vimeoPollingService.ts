@@ -84,4 +84,4 @@ async function pollVimeoForUpdates() {
         console.error('Error in Vimeo sync job', error);
     }
 }
-cron.schedule('* * * * *', pollVimeoForUpdates);
+cron.schedule('0 0 0 * * *', pollVimeoForUpdates);
