@@ -55,7 +55,6 @@ async function pollVimeoForUpdates() {
                     await trx.insert(Modules).values(module).execute();
                     for (const video of videos) {
                         await trx.insert(Videos).values(video).execute();
-                        console.log("Added video -> ",video);
                     }
                 })
             } catch (error) {

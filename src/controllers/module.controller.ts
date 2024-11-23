@@ -98,13 +98,15 @@ const fetchAllModulesFromVimeo = async () => {
         if (!vimeoFolders || vimeoFolders.length === 0) {
             console.warn('No modules found on Vimeo');
         }
+        // Filter modules whose titles start with "Module"
+        const filteredFolders = vimeoFolders.filter(folder => folder.name?.startsWith("Module"));
         // Extract only the required properties for each module
-        const modulesData = vimeoFolders.map(folder => ({
+        const modulesData = filteredFolders.map(folder => ({
             vimeo_module_id: folder.uri.split("/").pop()!,
         }));
         return modulesData;
     } catch (error) {
-        console.error('Error fetching modules from Vimeo:', error);
+        // console.error('Error fetching modules from Vimeo:', error);
         throw new Error('Failed to fetch modules from Vimeo');
     }
 }
@@ -115,6 +117,7 @@ const fetchModuleAndVideosFromVimeo = async (moduleId: string,existingModuleId?:
     try {
         const folderResponse = await vimeoAPI.get<VimeoFolder>(`/users/${VIMEO_USER_ID}/projects/${moduleId}`);
         const vimeoFolder = folderResponse.data;
+
         const module: Module = {
             id:  existingModuleId || uuidv4(),
             vimeo_module_id: moduleId,
