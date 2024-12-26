@@ -120,6 +120,7 @@ const fetchModuleAndVideosFromVimeo = async (moduleId: string,existingModuleId?:
 
         const module: Module = {
             id:  existingModuleId || uuidv4(),
+            year_id: null,
             vimeo_module_id: moduleId,
             title: vimeoFolder.name,
             description: vimeoFolder.description || '',
@@ -238,6 +239,7 @@ const testfetchAndStoreAllModules = asyncHandler(async (req: Request, res: Respo
             }
             const moduleData = {
                 id: uuidv4(),
+                year_id: uuidv4(),
                 vimeo_module_id: moduleId,
                 title: folder.name,
                 description: folder.description || '',

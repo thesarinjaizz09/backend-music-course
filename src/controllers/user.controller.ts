@@ -142,7 +142,7 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
      userId: user[0].id,
      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
    });
- 
+  
    res.cookie("accessToken", accessToken, {
      ...cookieOptions,
      maxAge: 24 * 60 * 60 * 1000, // 24 hours
