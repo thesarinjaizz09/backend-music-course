@@ -1,25 +1,29 @@
-import { pgTable, serial, varchar, text, integer, uuid } from 'drizzle-orm/pg-core';
-import { Modules } from './module.model';
+import { pgTable, serial, varchar, text, integer } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { createInsertSchema } from 'drizzle-zod';
+import { months } from './month.model';
 
-export const Videos = pgTable('videos', {
-   id: serial('id').primaryKey(),  // Unique ID for each video in our database
-   video_id: varchar('video_id', { length: 255 }).notNull().unique(),  // Vimeo video ID
-   module_id: uuid('module_id').references(() => Modules.id).notNull(),  // Foreign key to modules table
-   title: varchar('title', { length: 255 }).notNull(),
-   description: text('description'),
-   duration: integer('duration'),  // Duration in seconds
-   thumbnail_url: varchar('thumbnail_url', { length: 255 }),  // URL for video thumbnail
-   vimeo_url: varchar('vimeo_url', { length: 255 }).notNull(), // Embed URL for video playback
+export const videos = pgTable('videos', {
+  videoId: serial('video_id').primaryKey(),
+  monthId: integer('month_id')
+    .notNull()
+    .references(() => months.monthId),
+  videoVimeoId: varchar('video_vimeo_id', { length: 255 }).notNull(),
+  videoTitle: varchar('video_title', { length: 255 }).notNull(),
+  videoUrl: varchar('video_url', { length: 255 }).notNull(),
+  description: text('description'),
+  duration: integer('duration'),
+  thumbnailUrl: varchar('thumbnail_url', { length: 255 }),
 });
 
-// Video type
-export type Video = {
-    id: number;
-    video_id: string;
-    module_id: string;
-    title: string;
-    description?: string;
-    duration?: number;
-    thumbnail_url?: string;
-    vimeo_url: string;
-} 
+export const videosRelations = relations(videos, ({ one }) => ({
+  month: one(months, {
+    fields: [videos.monthId],
+    references: [months.monthId],
+  }),
+}));
+
+export type Video = typeof videos.$inferSelect;
+export type NewVideo = typeof videos.$inferInsert;
+
+export const videoSchema = createInsertSchema(videos);

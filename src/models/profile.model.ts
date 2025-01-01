@@ -1,28 +1,33 @@
-import { pgTable, uuid, varchar, date, timestamp } from 'drizzle-orm/pg-core';
-import { Users } from './user.model';
+import { pgTable, uuid, varchar, date, timestamp, integer } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { users } from './user.model';
+import { createInsertSchema } from 'drizzle-zod';
 
-// A table named 'profiles' with the given properties
-export const UserProfiles = pgTable('user_profiles', {
+export const userProfiles = pgTable('user_profiles', {
   id: uuid('id').primaryKey(),
-  userId: uuid('user_id').notNull().references(() => Users.id,{
-    onDelete: 'cascade',
-  }),  // Foreign key to the User table
-  firstName: varchar('first_name', { length: 50 }),  
-  lastName: varchar('last_name', { length: 50 }),   
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.userId, {
+      onDelete: 'cascade',
+    }),
+  firstName: varchar('first_name', { length: 50 }),
+  lastName: varchar('last_name', { length: 50 }),
   dateOfBirth: date('date_of_birth'),
   gender: varchar('gender', { length: 15 }),
-  createdAt: timestamp('created_at').defaultNow(),    
-  updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()), 
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
-// TypeScript interface for Profile
-export type UserProfile = {
-  id: string;
-  userId: string;   
-  firstName?: string;  
-  lastName?: string;
-  dateOfBirth?: string;
-  gender?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+export const userProfilesRelations = relations(userProfiles, ({ one }) => ({
+  user: one(users, {
+    fields: [userProfiles.userId],
+    references: [users.userId],
+  }),
+}));
+
+export type UserProfile = typeof userProfiles.$inferSelect;
+export type NewUserProfile = typeof userProfiles.$inferInsert;
+
+export const userProfileSchema = createInsertSchema(userProfiles);

@@ -1,11 +1,10 @@
 import { Request, Response } from "express";
 import { signUpSchema } from "../schemas/signUpSchema";
 import db from "../db/db_connect";
-import { Users } from "../models/user.model";
+import { users, refreshTokens, User, NewUser, RefreshToken } from "../models";
 import { eq, sql } from "drizzle-orm";
 import ApiError from "../utils/ApiError";
 import { comparePassword, hashPassword } from "../utils/passwordUtils";
-import { v4 as uuidv4 } from "uuid";
 import ApiResponse from "../utils/ApiResponse";
 import { loginSchema } from "../schemas/loginSchema";
 import {
@@ -13,7 +12,6 @@ import {
   generateRefreshToken,
   verifyRefreshToken,
 } from "../utils/tokenUtils";
-import { RefreshTokens } from "../models/refreshTokens.model";
 import asyncHandler from "../utils/asyncHandler";
 import z from "zod";
 import { changePasswordSchema } from "../schemas/changePasswordSchema";
@@ -38,10 +36,10 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
     // Validate user input
     const validatedData = signUpSchema.parse(req.body);
 
-    const existingUser = await db
+    const existingUser: User[] = await db
       .select()
-      .from(Users)
-      .where(eq(Users.email, validatedData.email))
+      .from(users)
+      .where(eq(users.email, validatedData.email))
       .limit(1);
   
     if (existingUser.length > 0) {
@@ -50,10 +48,9 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
    
     const hashedPassword = await hashPassword(validatedData.password);
   
-    const newUser = await db
-      .insert(Users)
+    const [newUser]: NewUser[] = await db
+      .insert(users)
       .values({
-        id: uuidv4(),
         username: validatedData.username,
         email: validatedData.email,
         password: hashedPassword,
@@ -62,16 +59,20 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
       })
       .returning();
   
-    const savedUser = await db
+      if (!newUser || !newUser.userId) {
+        throw new ApiError(500, "User creation failed");
+      }
+      
+    const [savedUser]: User[] = await db
       .select()
-      .from(Users)
-      .where(eq(Users.id, newUser[0].id))
+      .from(users)
+      .where(eq(users.userId, newUser.userId))
       .limit(1);
-    if (savedUser.length === 0) {
+    if (!savedUser) {
       throw new ApiError(500, "An error occurred while registering the user");
     }
     // Exclude sensitive fields from the response user object
-    const { password: _, ...userWithoutPassword } = savedUser[0];
+    const { password: _, ...userWithoutPassword } = savedUser;
     res
       .status(201)
       .json(
@@ -114,10 +115,10 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
  try {
    const { email, password } = loginSchema.parse(req.body);
    // find the user
-   const user = await db
+   const user: User[] = await db
      .select()
-     .from(Users)
-     .where(eq(Users.email, email))
+     .from(users)
+     .where(eq(users.email, email))
      .limit(1);
 
    if (user.length === 0) {
@@ -137,9 +138,9 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
    const refreshToken = generateRefreshToken(userWithoutPassword);
    
    // store refresh token in the database with expiration time
-   await db.insert(RefreshTokens).values({
+   await db.insert(refreshTokens).values({
      token: refreshToken,
-     userId: user[0].id,
+     userId: user[0].userId,
      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
    });
   
@@ -188,7 +189,7 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Refresh token is missing");
   }
 
-  await db.delete(RefreshTokens).where(eq(RefreshTokens.token, refreshToken));
+  await db.delete(refreshTokens).where(eq(refreshTokens.token, refreshToken));
 
   res.clearCookie("accessToken", cookieOptions);
   res.clearCookie("refreshToken", cookieOptions);
@@ -210,7 +211,7 @@ const refreshAccessToken = asyncHandler(async (req: Request, res: Response) => {
       !valid ||
       !decoded ||
       typeof decoded !== "object" ||
-      !(decoded.user.id)
+      !(decoded.user.userId)
     ) {
       throw new ApiError(403, "Invalid refresh token");
     }
@@ -218,10 +219,10 @@ const refreshAccessToken = asyncHandler(async (req: Request, res: Response) => {
     // Check if refresh token exists in the database and is not expired
     const storedToken = await db
       .select()
-      .from(RefreshTokens)
+      .from(refreshTokens)
       .where(
-        sql`${RefreshTokens.token} = ${refreshToken} AND ${
-          RefreshTokens.expiresAt
+        sql`${refreshTokens.token} = ${refreshToken} AND ${
+          refreshTokens.expiresAt
         } > ${new Date()}`
       )
       .limit(1);
@@ -231,18 +232,18 @@ const refreshAccessToken = asyncHandler(async (req: Request, res: Response) => {
     }
 
     // Generate a new access token and refresh token
-    const newAccessToken = generateAccessToken(decoded.user.id);
-    const newRefreshToken = generateRefreshToken(decoded.user.id);
+    const newAccessToken = generateAccessToken(decoded.user.userId);
+    const newRefreshToken = generateRefreshToken(decoded.user.userId);
 
     // Store new refresh token in the database
-    await db.insert(RefreshTokens).values({
+    await db.insert(refreshTokens).values({
       token: newRefreshToken,
-      userId: decoded.user.id,
+      userId: decoded.user.userId,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days expiration
     });
 
     // Delete the old refresh token from the database
-    await db.delete(RefreshTokens).where(eq(RefreshTokens.token, refreshToken));
+    await db.delete(refreshTokens).where(eq(refreshTokens.token, refreshToken));
 
     // Set cookies with the new tokens
     res.cookie("accessToken", newAccessToken, {
@@ -283,7 +284,7 @@ const refreshAccessToken = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const changePassword = asyncHandler(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
+  const userId = req.user?.userId;
   if (!userId) {
     throw new ApiError(401, "User not authenticated");
   }
@@ -292,8 +293,8 @@ const changePassword = asyncHandler(async (req: Request, res: Response) => {
 
     const user = await db
       .select()
-      .from(Users)
-      .where(eq(Users.id, userId))
+      .from(users)
+      .where(eq(users.userId, userId))
       .limit(1);
 
     if(user.length === 0) {
@@ -307,7 +308,7 @@ const changePassword = asyncHandler(async (req: Request, res: Response) => {
 
     const hashedPassword = await hashPassword(newPassword);
 
-    await db.update(Users).set({ password: hashedPassword }).where(eq(Users.id, userId));
+    await db.update(users).set({ password: hashedPassword }).where(eq(users.userId, userId));
 
     res.status(200).json(new ApiResponse(200, null, "Password changed successfully"));
   } catch (error) {

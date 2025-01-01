@@ -1,22 +1,30 @@
-import { pgTable, serial, uuid, varchar, timestamp} from 'drizzle-orm/pg-core';
-import { Users } from './user.model';
+import { pgTable, serial, varchar, timestamp, integer } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { users } from './user.model';
+import { createInsertSchema } from 'drizzle-zod';
 
-// Define refreshTokens table with the given properties
-export const RefreshTokens = pgTable('refresh_tokens', {
+// Define the refreshTokens table with the given properties
+export const refreshTokens = pgTable('refresh_tokens', {
   id: serial('id').primaryKey(),
   token: varchar('token', { length: 512 }).notNull(),
-  userId: uuid('user_id')
+  userId: integer('user_id')
     .notNull()
-    .references(() => Users.id),  // Foreign key reference to Users table
-  expiresAt: timestamp('expires_at').notNull(),      // Expiration timestamp
-  createdAt: timestamp('created_at').defaultNow(),   // Creation timestamp
+    .references(() => users.userId),  // Foreign key reference to Users table
+  expiresAt: timestamp('expires_at').notNull(), // Expiration timestamp
+  createdAt: timestamp('created_at').defaultNow(), // Creation timestamp
 });
 
-// Type definition for refresh token
-export type RefreshToken = {
-  id: number;
-  token: string;
-  userId: string;
-  expiresAt: Date;
-  createdAt: Date;
-};
+
+export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [refreshTokens.userId],
+    references: [users.userId],
+  }),
+}));
+
+
+export type RefreshToken = typeof refreshTokens.$inferSelect;
+export type NewRefreshToken = typeof refreshTokens.$inferInsert;
+
+// Schema validation using Zod
+export const refreshTokenSchema = createInsertSchema(refreshTokens);

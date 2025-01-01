@@ -3,10 +3,8 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import ApiError from '../utils/ApiError';
 import asyncHandler from '../utils/asyncHandler';
 import db from '../db/db_connect';
-import { Users, User } from '../models/user.model';
+import { users, User } from  '../models';
 import { eq } from 'drizzle-orm';
-
-
 
 
 const verifyJWT = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
@@ -25,17 +23,17 @@ const verifyJWT = asyncHandler(async (req: Request, res: Response, next: NextFun
     // Verify the token using promises
     try {
         const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET as string) as JwtPayload;
-        const user = await db
+        const user: User = await db
         .select()
-        .from(Users)
-        .where(eq(Users.id,decodedToken.user.id))
+        .from(users)
+        .where(eq(users.userId,decodedToken.user.userId))
         .limit(1)
         .then(rows => rows[0]);
 
         if (!user) {
             return next(new ApiError(401, "Invalid Access Token"));
         }
-        req.user = { id: user.id, username: user.username, email: user.email } as User;
+        req.user = { userId: user.userId, username: user.username, email: user.email } as User;
         
 
         next();

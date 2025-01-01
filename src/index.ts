@@ -1,7 +1,9 @@
 import db from './db/db_connect';
 import app from "./app";
 import { Request, Response } from 'express';
-import './services/vimeoPollingService';
+import dotenv from 'dotenv';
+dotenv.config();
+
 
 const port = process.env.PORT || 4000;
 

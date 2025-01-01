@@ -1,5 +1,8 @@
 // vimeoConfig.ts
 import axios, { AxiosInstance } from 'axios';
+import dotenv from 'dotenv';
+dotenv.config();
+console.log('VIMEO_ACCESS_TOKEN:', process.env.VIMEO_ACCESS_TOKEN);
 
 const VIMEO_ACCESS_TOKEN = process.env.VIMEO_ACCESS_TOKEN;
 
