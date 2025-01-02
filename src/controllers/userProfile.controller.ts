@@ -1,108 +1,191 @@
-// import { eq } from "drizzle-orm";
-// import { UserProfileData } from "../@types/types";
-// import db from "../db/db_connect";
-// import { users, userProfiles, years, modules } from "../models";
-// import asyncHandler from "../utils/asyncHandler";
-// import { Request, Response } from "express";
-// import ApiError from "../utils/ApiError";
-// import { userProfileschema } from "../schemas/userProfileschema";
-// import ApiResponse from "../utils/ApiResponse";
-// import { v4 as uuidv4 } from "uuid";
-
-// const getUserProfile = async (userId: string) => {
-    
-//     const user = await db
-//     .select({
-//         id: users.userId,
-//         username: users.username,
-//         email: users.email,
-//         firstName: userProfiles.firstName,
-//         lastName: userProfiles.lastName,
-//         dateOfBirth: userProfiles.dateOfBirth,
-//         gender: userProfiles.gender,
-//         registeredAt: users.createdAt,
-//     })
-//     .from(users)
-//     .leftJoin(userProfiles, eq(users.userId, userProfiles.userId))
-//     .where(eq(users.userId, userId))
-//     .limit(1);
-
-//     if (user.length === 0) {
-//         return null;
-//     }
-
-//     const enrolledModules = await db
-//     .select({
-//         moduleId: Modules.id,
-//         title: Modules.title,
-//         description: Modules.description,
-//         enrollmentDate: UserModules.enrollmentDate,
-//         progress: UserModules.progress,
-//         completed: UserModules.completed,
-//     })
-//     .from(UserModules)
-//     .innerJoin(Modules, eq(UserModules.moduleId, Modules.id))
-//     .where(eq(UserModules.userId, userId));
-
-//     return {
-//         id: user[0].id,
-//         username: user[0].username,
-//         email: user[0].email,
-//         firstName: user[0].firstName || '',
-//         lastName: user[0].lastName || '',
-//         dateOfBirth: user[0].dateOfBirth,
-//         gender: user[0].gender || '',
-//         registeredAt: user[0].registeredAt,
-//         enrolledModules,
-//     }
-// }
-
-// const getProfile = asyncHandler(async (req: Request, res: Response) => {
-//     const userId = req.user?.id;
-//     if(!userId){
-//         throw new ApiError(401, 'Unauthorized');
-//     }
-
-//     const profile = await getUserProfile(userId);
-//     if(!profile){
-//         throw new ApiError(404, 'User not found');
-//     }
-//     res.json(profile);
-// });
-
-// const createOrUpdateProfile = asyncHandler(async (req: Request, res: Response) => {
-//     const userId = req.user?.useImperativeHandle(
-//       first,
-//       () => {
-//         second
-//       },
-//       [third],
-//     );
-//     if (!userId) {
-//         throw new ApiError(401, 'Unauthorized');
-//     }
-
-//     const validatedData = userProfileschema.parse(req.body);
-
-//     const existingProfile = await db
-//     .select()
-//     .from(userProfiles)
-//     .where(eq(userProfiles.userId, userId))
-//     .limit(1);
-
-//     await db.transaction(async (tx) => {
-//         if (existingProfile.length > 0) {
-//             await tx.update(userProfiles)
-//             .set(validatedData)
-//             .where(eq(userProfiles.userId, userId));
-//             res.status(200).json(new ApiResponse(200, null, 'Profile updated successfully'));
-//         } else {
-//             await tx.insert(userProfiles)
-//             .values({ id: uuidv4(), userId, ...validatedData });
-//             res.status(201).json(new ApiResponse(201, null, 'Profile created successfully'));
-//         }
-//     });
-// });
 
 
-// export {getProfile, createOrUpdateProfile};
+
+import { eq } from "drizzle-orm";
+import { Request, Response, NextFunction } from "express";
+import db from "../db/db_connect";
+import { 
+  users, 
+} from "../models";
+import ApiError from "../utils/ApiError";
+import { UserWithProfile } from "../@types/types";
+
+  
+  export const getUserProfile = async (req: Request, res: Response,  next: NextFunction): Promise<void> => {
+    try {
+        if (!req.user || !req.user.userId) {
+            throw new ApiError(401, 'Unauthorized');
+          }
+      const userId = req.user.userId; // Assuming middleware sets this
+  
+      // Get user data with profile
+      const user: UserWithProfile | undefined = await db.query.users.findFirst({
+        where: eq(users.userId, userId),
+        columns:{
+          password: false,
+        },
+        with: {
+          profile: {
+            columns:{
+              userId: false
+            }
+          }
+        },
+      });
+  
+      if (!user) {
+        throw new ApiError(404, 'User not found');
+      }
+
+      const userOrders = await db.query.orders.findMany({
+        where: (orders, { eq }) => eq(orders.userId, userId),
+        columns: {},
+        with: {
+          orderItems: {
+            columns: {itemType:true},
+            with: {
+              course: {
+                with: {
+                  years: {
+                    with: {
+                      modules: {
+                        with: {
+                          months: {
+                            with: {
+                              videos: true
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              year: {
+                with: {
+                  course: true,
+                  modules: {
+                    with: {
+                      months: {
+                        with: {
+                          videos: true
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              module: {
+                with: {
+                  course: true,
+                  year: true,
+                  months: {
+                    with: {
+                      videos: true
+                    }
+                  }
+                }
+              },
+              month: {
+                with: {
+                  course: true,
+                  year: true,
+                  videos: true
+                }
+              }
+            }
+          }, 
+        },
+      });
+
+      const purchasedDetails = userOrders.flatMap((order) => 
+        order.orderItems.map((item) => {
+          console.log(item.itemType);
+          switch (item.itemType) {
+            case "Course":
+              console.log("course selected", item.course);
+              return {
+                type: 'Course',
+              
+                details: {
+                  ...item.course,
+                  // years: item.course?.years.map((year) => ({
+                  //   ...year,
+                  //   modules: year.modules.map((module) => ({
+                  //     ...module,
+                  //     months: module.months.map((month) => ({
+                  //       ...month,
+                  //       videos: month.videos,
+                  //     })),
+                  //   })),
+                  // })),
+                }
+              };
+            case 'Year':
+              return {
+                type: 'Year',
+                course: {
+                  ...item.year.course,
+                },
+                details: {
+                  yearId: item.year.yearId,
+                  courseId: item.year.courseId,
+                  yearName: item.year.yearName,
+                  modules: item.year.modules
+                },
+              };
+            case 'Module':
+              return {
+                type: 'Module',
+                course: {
+                  ...item.module.course,
+                },
+                year: {
+                  ...item.module.year,
+                },
+                details: {
+                  moduleId: item.module.moduleId,
+                  courseId: item.module.courseId,
+                  yearId: item.module.yearId,
+                  moduleName: item.module.moduleName,
+                  months: item.module.months,
+                },
+              };
+              case 'Month':
+                return {
+                  type: 'Month',
+                  course: {
+                    ...item.month.course,
+                  },
+                  year: {
+                    ...item.month.year,
+                  },
+                  details: {
+                    monthId: item.month.monthId,
+                    vimeoMonthId: item.month.vimeoMonthId,
+                    monthName: item.month.monthName,
+                    moduleId: item.month.moduleId,
+                    videos: item.month.videos,
+                  },
+                };
+            default:
+              return null;
+          }
+        })
+      ).filter((item) => item !== null);
+      
+
+      res.status(200).json({
+        user: user,
+        // orders: userOrders,
+        orders: purchasedDetails
+        // purchases
+      });
+  
+    } catch (error) {
+      console.error('Error in getUserProfile:', error);
+       throw new ApiError(500, 'Internal Server Error');
+    }
+  };
+
+  

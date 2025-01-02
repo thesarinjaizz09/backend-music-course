@@ -1,3 +1,12 @@
+import { User, UserProfile } from "../models";
+
+//userProfile types
+type UserProfileWithoutPassword = Omit<User, "password">;
+type ProfileWithoutUserId = Omit<UserProfile, "userId">;
+
+type UserWithProfile = UserProfileWithoutPassword & {
+  profile: ProfileWithoutUserId | null; // Adjust nullability based on your schema
+};
 
 type VimeoFolder =  {
   name: string;
@@ -41,51 +50,56 @@ type UserWithoutPassword = {
     username: string;
 }
 
-  //extra for future use
-//   export type VimeoFolder = {
-//     id: string;
-//     name: string;
-//     description?: string;
-// };
 
-// export type VimeoVideo = {
-//     id: string;
-//     name: string;
-//     description?: string;
-//     duration: number;
-//     thumbnail_url: string;
-//     vimeo_url: string;
-// };
 
-// export type VimeoData = {
-//     folder: VimeoFolder;
-//     videos: VimeoVideo[];
-// };
 
-type UserProfileData = {
-    id: string;
-    username: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    dateOfBirth: Date;
-    gender: string ;
-    registeredAt: Date;
-    enrolledModules: Array<{
-      moduleId: string;
-      title: string;
-      description: string;
-      enrollmentDate: Date;
-      progress: string;
-      completed: boolean;
-    }>;
-};
+type PurchaseDetails = {
+  orderItemId: number;
+  startDate: Date;
+  endDate: Date | null;
+  price: number;
+  status: string;
+}
+
+type MonthData = {
+  monthId: number;
+  monthName: string;
+  isAccessible: boolean;
+}
+
+type ModuleData = {
+  moduleId: number;
+  moduleName: string;
+  isAccessible: boolean;
+  months: MonthData[];
+}
+
+type YearData = {
+  yearId: number;
+  yearName: string;
+  isAccessible: boolean;
+  modules: ModuleData[];
+}
+
+type CourseAccess = {
+  courseId: number;
+  name: string;
+  description: string | null;
+  isFullAccess: boolean;
+  purchases: PurchaseDetails[];
+  years: YearData[];
+}
 
 export { 
   VimeoFolder, 
   VimeoVideo, 
   UserWithoutPassword, 
-  UserProfileData,
   VimeoItem,
-  VimeoResponse
+  VimeoResponse,
+  PurchaseDetails,
+  MonthData,
+  ModuleData,
+  YearData,
+  CourseAccess,
+  UserWithProfile
 };

@@ -7,7 +7,7 @@ import { users, User } from  '../models';
 import { eq } from 'drizzle-orm';
 
 
-const verifyJWT = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+const verifyJWT = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void>  => {
     // Get the token from cookies or headers
     // Check if the token exists
     // Verify the token using promises

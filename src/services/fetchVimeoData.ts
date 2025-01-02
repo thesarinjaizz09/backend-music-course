@@ -99,7 +99,7 @@ async function processFolder(courseId: number, folderId: string) {
         
         // Insert or update module
         const [module] = await db.insert(modules)
-          .values({ yearId: year.yearId, moduleName })
+          .values({ courseId: courseId, yearId: year.yearId, moduleName})
           .onConflictDoUpdate({
             target: [modules.moduleName],
             set: { moduleName },
@@ -113,6 +113,7 @@ async function processFolder(courseId: number, folderId: string) {
           const month = moduleMonths[i];
           await db.insert(months)
             .values({
+              courseId: courseId,
               yearId: year.yearId,
               monthName: month.monthName,
               vimeoMonthId: month.monthId,

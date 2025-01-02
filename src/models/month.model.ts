@@ -4,9 +4,11 @@ import { createInsertSchema } from 'drizzle-zod';
 import { years } from './year.model';
 import { modules } from './module.model';
 import { videos } from './video.model';
+import { courses } from './course.model';
 
 export const months = pgTable('months', {
   monthId: serial('month_id').primaryKey(),
+  courseId: integer('course_id').notNull().references(() => courses.courseId),
   yearId: integer('year_id')
     .notNull()
     .references(() => years.yearId),
@@ -15,6 +17,7 @@ export const months = pgTable('months', {
   moduleId: integer('module_id')
     .notNull()
     .references(() => modules.moduleId),
+  
 })
 
 // ,(table) => ({
@@ -22,6 +25,10 @@ export const months = pgTable('months', {
 // }));
 
 export const monthsRelations = relations(months, ({ one, many }) => ({
+  course: one(courses, {
+    fields: [months.courseId],
+    references: [courses.courseId],
+  }),
   year: one(years, {
     fields: [months.yearId],
     references: [years.yearId],

@@ -1,6 +1,6 @@
 import { pgTable, serial, varchar, text, integer } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { createInsertSchema } from 'drizzle-zod';
+import { createInsertSchema,createSelectSchema } from 'drizzle-zod';
 import { months } from './month.model';
 
 export const videos = pgTable('videos', {
@@ -27,3 +27,4 @@ export type Video = typeof videos.$inferSelect;
 export type NewVideo = typeof videos.$inferInsert;
 
 export const videoSchema = createInsertSchema(videos);
+export const videoSchemaSelect = createSelectSchema(videos);
