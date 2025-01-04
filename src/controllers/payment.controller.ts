@@ -1,0 +1,99 @@
+import { Request, Response } from "express";
+import Stripe from 'stripe'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: '2024-12-18.acacia'
+});
+  
+const SUCCESS_URL = `${process.env.NEXT_BASE_URL!}/profile`
+const CANCEL_URL = `${process.env.NEXT_BASE_URL!}/buy-course`
+  
+const createCheckoutSession = async (req: Request, res: Response) :Promise<void>=> {
+    try {
+        const { courseName, metadata, amount } = req.body;
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card', 'cashapp'],
+            line_items: [
+              {
+                price_data: {
+                  currency: 'usd',
+                  product_data: {
+                    name: courseName,
+                    metadata: metadata,
+                  },
+                  unit_amount: amount, // price in cents
+                },
+                quantity: 1
+              },
+            ],
+            mode: 'payment',
+            success_url: SUCCESS_URL,
+            cancel_url: CANCEL_URL,
+            metadata: metadata,
+          })
+        res.status(200).json({ url: session.url })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ error: 'Internal server error' })
+    }
+}
+
+const handleStripeWebhook = async (req: Request, res: Response) => {
+    const signature = req.headers["stripe-signature"]!;
+    try {
+        const event = stripe.webhooks.constructEvent(
+            req.body,
+            signature,
+            process.env.STRIPE_WEBHOOK_SECRET!
+        );
+        const eventTimestamp = new Date(event.created * 1000);
+        console.log(`Event received at: ${eventTimestamp.toLocaleDateString()} ${eventTimestamp.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+        })}`);
+
+        switch (event.type) {
+            case 'checkout.session.completed':
+                const session = event.data.object as Stripe.Checkout.Session;
+
+                const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+
+                const paymentDetails = {
+                    customerDetails: session.customer_details,
+                    totalAmount: session.amount_total,
+                    metadata: session.metadata,
+                    paymentIntent: session.payment_intent,
+                    products: lineItems.data.map((item) => ({
+                        name: item.description,
+                        quantity: item.quantity,
+                        price: item.amount_total,
+                    })),
+                }
+
+                console.dir(paymentDetails)
+                break;
+
+            case "charge.failed":
+                console.log("Charge Failed:", event.data.object);
+                break;
+            
+            case "charge.succeeded":
+                console.log("Charge Succeeded:", event.data.object);
+                break;
+        
+            default:
+                console.log("Unhandled event type:", event.type);
+                break;
+        }
+
+        console.log("Webhook event received:", event);
+        res.status(200).json({ received: true });
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ error: 'Internal server error' })
+        
+    }
+}
+
+export {createCheckoutSession , handleStripeWebhook}
