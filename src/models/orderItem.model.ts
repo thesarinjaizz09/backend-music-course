@@ -14,7 +14,7 @@ export const orderItems = pgTable('order_items', {
     .references(() => orders.orderId),
   itemType: varchar('item_type', { length: 20 }).notNull(),
   itemName: varchar('item_name', { length: 255 }).notNull(),
-  itemId: integer('item_id').notNull(),
+  // itemId: integer('item_id').notNull(),
 });
 
 export const orderItemsRelations = relations(orderItems, ({ one, many }) => ({

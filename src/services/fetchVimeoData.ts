@@ -6,9 +6,9 @@ import { VimeoResponse } from '../@types/types';
 
 const VIMEO_USER_ID = process.env.VIMEO_USER_ID;
 const COURSE_IDS = {
-  BHUSAN: process.env.BHUSAN_COURSE_ID,
-  BIBHUSAN: process.env.BIBHUSAN_COURSE_ID,
-  RATNA: process.env.RATNA_COURSE_ID,
+  Bhusan: process.env.BHUSAN_COURSE_ID,
+  Bibhusan: process.env.BIBHUSAN_COURSE_ID,
+  Ratna: process.env.RATNA_COURSE_ID,
 };
 
 async function getFolderContents(folderId: string): Promise<VimeoResponse['data']> {

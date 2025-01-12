@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, timestamp, decimal } from 'drizzle-orm/pg-core';
+import { pgTable, serial, integer, timestamp, decimal,varchar } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
 import { users } from './user.model';
@@ -11,6 +11,8 @@ export const orders = pgTable('orders', {
     .references(() => users.userId),
   orderDate: timestamp('order_date').defaultNow().notNull(),
   totalAmount: decimal('total_amount', { precision: 10, scale: 2 }).notNull(),
+  paymentStatus: varchar('payment_status', { length: 20 }).notNull(),
+  paymentIntent: varchar('payment_intent', { length: 255 }).notNull(),
 });
 
 export const ordersRelations = relations(orders, ({ one, many }) => ({

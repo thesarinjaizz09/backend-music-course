@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
 import Stripe from 'stripe'
+import db from "../db/db_connect";
+import { orderItems, orders, users } from "../models";
+import { eq } from "drizzle-orm";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: '2024-12-18.acacia'
@@ -59,24 +62,73 @@ const handleStripeWebhook = async (req: Request, res: Response) => {
             case 'checkout.session.completed':
                 const session = event.data.object as Stripe.Checkout.Session;
 
-                const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+                // const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
 
-                const paymentDetails = {
-                    customerDetails: session.customer_details,
-                    totalAmount: session.amount_total,
-                    metadata: session.metadata,
-                    paymentIntent: session.payment_intent,
-                    products: lineItems.data.map((item) => ({
-                        name: item.description,
-                        quantity: item.quantity,
-                        price: item.amount_total,
-                    })),
+                // const paymentDetails = {
+                //     customerDetails: session.customer_details,
+                //     totalAmount: session.amount_total,
+                //     metadata: session.metadata,
+                //     paymentIntent: session.payment_intent,
+                //     products: lineItems.data.map((item) => ({
+                //         name: item.description,
+                //         quantity: item.quantity,
+                //         price: item.amount_total,
+                //     })),
+                // }
+                const totalAmount = session.amount_total! / 100;
+                const metadata = session.metadata;
+                if(!metadata) {
+                    throw new Error('Metadata is required')
                 }
+                //find userId from emailId that is present in metadata
+                const emailId = metadata.email;
+                if(!emailId) {
+                    throw new Error('Email is required')
+                }
+                const user = await db
+                .select()
+                .from(users)
+                .where(eq(users.email, emailId))
+                .limit(1);
 
-                console.dir(paymentDetails)
+                const userId = user[0].userId;
+                const paymentIntent = session.payment_intent as string;
+                
+                 // Insert order into the database
+                const [order] = await db.insert(orders).values({
+                    userId,
+                    orderDate: new Date(),
+                    totalAmount: totalAmount.toFixed(2),
+                    paymentStatus: 'succeeded',
+                    paymentIntent,
+                }).returning();
+
+                // Insert each product into the `orderItems` table
+               
+                const orderItem = await db.insert(orderItems).values({
+                    orderId: order.orderId,
+                    itemType: metadata.type, 
+                    // itemId: parseInt(metadata.moduleId, 10), 
+                    itemName: metadata.plan,
+                    });
+                
+
+                console.log('Order created successfully:', order);
+                console.log('Order Item created successfully:', orderItem);
                 break;
 
             case "charge.failed":
+                const charge = event.data.object as Stripe.Charge;
+                
+                 // Insert failed payment into the database
+                await db.insert(orders).values({
+                    userId: parseInt(charge.metadata.userId, 10), // 
+                    orderDate: new Date(),
+                    totalAmount: charge.amount.toFixed(2), 
+                    paymentStatus: 'failed',
+                    paymentIntent: charge.payment_intent as string,
+                });
+
                 console.log("Charge Failed:", event.data.object);
                 break;
             
@@ -97,5 +149,6 @@ const handleStripeWebhook = async (req: Request, res: Response) => {
         
     }
 }
+
 
 export {createCheckoutSession , handleStripeWebhook}
