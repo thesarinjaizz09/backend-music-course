@@ -98,32 +98,106 @@ import { UserWithProfile } from "../@types/types";
         },
       });
 
-      const purchasedDetails = userOrders.flatMap((order) => 
+      // const purchasedDetails = userOrders.flatMap((order) => 
+      //   order.orderItems.map((item) => {
+      //     console.log(item.itemType);
+      //     switch (item.itemType) {
+      //       case "Course":
+      //         console.log("course selected", item.course);
+      //         return {
+      //           type: 'Course',
+              
+      //           details: {
+      //             ...item.course,
+      //             // years: item.course?.years.map((year) => ({
+      //             //   ...year,
+      //             //   modules: year.modules.map((module) => ({
+      //             //     ...module,
+      //             //     months: module.months.map((month) => ({
+      //             //       ...month,
+      //             //       videos: month.videos,
+      //             //     })),
+      //             //   })),
+      //             // })),
+      //           }
+      //         };
+      //       case 'Year':
+      //         return {
+      //           type: 'Year',
+      //           course: {
+      //             ...item.year.course,
+      //           },
+      //           details: {
+      //             yearId: item.year.yearId,
+      //             courseId: item.year.courseId,
+      //             yearName: item.year.yearName,
+      //             modules: item.year.modules
+      //           },
+      //         };
+      //       case 'Module':
+      //         return {
+      //           type: 'Module',
+      //           course: {
+      //             ...item.module.course,
+      //           },
+      //           year: {
+      //             ...item.module.year,
+      //           },
+      //           details: {
+      //             moduleId: item.module.moduleId,
+      //             courseId: item.module.courseId,
+      //             yearId: item.module.yearId,
+      //             moduleName: item.module.moduleName,
+      //             months: item.module.months,
+      //           },
+      //         };
+      //         case 'Month':
+      //           return {
+      //             type: 'Month',
+      //             course: {
+      //               ...item.month.course,
+      //             },
+      //             year: {
+      //               ...item.month.year,
+      //             },
+      //             details: {
+      //               monthId: item.month.monthId,
+      //               vimeoMonthId: item.month.vimeoMonthId,
+      //               monthName: item.month.monthName,
+      //               moduleId: item.month.moduleId,
+      //               videos: item.month.videos,
+      //             },
+      //           };
+      //       default:
+      //         return null;
+      //     }
+      //   })
+      // ).filter((item) => item !== null);
+      
+      const purchasedDetails = userOrders.flatMap((order) =>
         order.orderItems.map((item) => {
           console.log(item.itemType);
+      
           switch (item.itemType) {
             case "Course":
-              console.log("course selected", item.course);
+              if (!item.course) {
+                console.warn("Missing course data for item:", item);
+                return null;
+              }
               return {
-                type: 'Course',
-              
+                type: "Course",
                 details: {
                   ...item.course,
-                  // years: item.course?.years.map((year) => ({
-                  //   ...year,
-                  //   modules: year.modules.map((module) => ({
-                  //     ...module,
-                  //     months: module.months.map((month) => ({
-                  //       ...month,
-                  //       videos: month.videos,
-                  //     })),
-                  //   })),
-                  // })),
-                }
+                  // Add other processing logic if necessary
+                },
               };
-            case 'Year':
+            case "Year":
+              if (!item.year || !item.year.course) {
+                console.warn("Missing year or course data for item:", item);
+                return null;
+              }
               return {
-                type: 'Year',
+                type: "Year",
                 course: {
                   ...item.year.course,
                 },
@@ -131,12 +205,16 @@ import { UserWithProfile } from "../@types/types";
                   yearId: item.year.yearId,
                   courseId: item.year.courseId,
                   yearName: item.year.yearName,
-                  modules: item.year.modules
+                  modules: item.year.modules,
                 },
               };
-            case 'Module':
+            case "Module":
+              if (!item.module || !item.module.course || !item.module.year) {
+                console.warn("Missing module, course, or year data for item:", item);
+                return null;
+              }
               return {
-                type: 'Module',
+                type: "Module",
                 course: {
                   ...item.module.course,
                 },
@@ -151,30 +229,34 @@ import { UserWithProfile } from "../@types/types";
                   months: item.module.months,
                 },
               };
-              case 'Month':
-                return {
-                  type: 'Month',
-                  course: {
-                    ...item.month.course,
-                  },
-                  year: {
-                    ...item.month.year,
-                  },
-                  details: {
-                    monthId: item.month.monthId,
-                    vimeoMonthId: item.month.vimeoMonthId,
-                    monthName: item.month.monthName,
-                    moduleId: item.month.moduleId,
-                    videos: item.month.videos,
-                  },
-                };
+            case "Month":
+              if (!item.month || !item.month.course || !item.month.year) {
+                console.warn("Missing month, course, or year data for item:", item);
+                return null;
+              }
+              return {
+                type: "Month",
+                course: {
+                  ...item.month.course,
+                },
+                year: {
+                  ...item.month.year,
+                },
+                details: {
+                  monthId: item.month.monthId,
+                  vimeoMonthId: item.month.vimeoMonthId,
+                  monthName: item.month.monthName,
+                  moduleId: item.month.moduleId,
+                  videos: item.month.videos,
+                },
+              };
             default:
+              console.warn("Unknown item type:", item.itemType);
               return null;
           }
         })
       ).filter((item) => item !== null);
       
-
       res.status(200).json({
         user: user,
         // orders: userOrders,

@@ -77,8 +77,14 @@ const handleStripeWebhook = async (req: Request, res: Response) => {
                 // }
                 const totalAmount = session.amount_total! / 100;
                 const metadata = session.metadata;
+                let itemName;
                 if(!metadata) {
                     throw new Error('Metadata is required')
+                }
+                if(metadata.plan === 'Full Course'){
+                    itemName = metadata.course;
+                }else{
+                    itemName = metadata.plan;
                 }
                 //find userId from emailId that is present in metadata
                 const emailId = metadata.email;
@@ -109,7 +115,7 @@ const handleStripeWebhook = async (req: Request, res: Response) => {
                     orderId: order.orderId,
                     itemType: metadata.type, 
                     // itemId: parseInt(metadata.moduleId, 10), 
-                    itemName: metadata.plan,
+                    itemName: itemName,
                     });
                 
 
