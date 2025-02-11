@@ -102,7 +102,7 @@ import { UserWithProfile} from "../@types/types";
       
 
   
-      const purchasedDetails: Array<{ type: string; details: any }> = userOrders.flatMap((order) =>
+      const purchasedDetails = userOrders.flatMap((order) =>
         order.orderItems.map((item) => {
           console.log(item.itemType);
       
@@ -113,9 +113,10 @@ import { UserWithProfile} from "../@types/types";
                 return null;
               }
               return {
-                type: "Course",
+               
                 details: {
                   [item.course.courseId]: {
+                    type: "Course",
                     courseName: item.course.courseName,
                     years: item.course.years.map((year: any) => ({ // Iterate over years array
                       yearId: year.yearId,
@@ -147,9 +148,9 @@ import { UserWithProfile} from "../@types/types";
                 return null;
               }
               return {
-                type: "Year",
                 details: {
                   [item.year.course.courseId]: {
+                      type: "Year",
                       courseName: item.year.course.courseName,
                       years: {
                           yearId: item.year.yearId,
@@ -181,9 +182,9 @@ import { UserWithProfile} from "../@types/types";
                 return null;
               }
               return {
-                type: "Module",
                 details: {
                   [item.module.course.courseId]: {
+                    type: "Module",
                     courseName: item.module.course.courseName,
                     years: {
                       yearId: item.module.year.yearId,
@@ -216,9 +217,9 @@ import { UserWithProfile} from "../@types/types";
                 return null;
               }
               return {
-                type: "Month",
                 details: {
                   [item.month.course.courseId]: {
+                    type: "Month",
                     courseName: item.month.course.courseName,
                     years: {
                       yearId: item.month.year.yearId,
