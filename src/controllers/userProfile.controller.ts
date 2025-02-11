@@ -8,7 +8,7 @@ import {
   users, 
 } from "../models";
 import ApiError from "../utils/ApiError";
-import { UserWithProfile } from "../@types/types";
+import { UserWithProfile} from "../@types/types";
 
   
   export const getUserProfile = async (req: Request, res: Response,  next: NextFunction): Promise<void> => {
@@ -98,9 +98,11 @@ import { UserWithProfile } from "../@types/types";
           }, 
         },
       });
+    
+      
 
-
-      const purchasedDetails = userOrders.flatMap((order) =>
+  
+      const purchasedDetails: Array<{ type: string; details: any }> = userOrders.flatMap((order) =>
         order.orderItems.map((item) => {
           console.log(item.itemType);
       
@@ -113,10 +115,32 @@ import { UserWithProfile } from "../@types/types";
               return {
                 type: "Course",
                 details: {
-                  ...item.course,
-                  // Add other processing logic if necessary
-                },
+                  [item.course.courseId]: {
+                    courseName: item.course.courseName,
+                    years: item.course.years.map((year: any) => ({ // Iterate over years array
+                      yearId: year.yearId,
+                      yearName: year.yearName,
+                      modules: year.modules.map((module: any) => ({
+                          moduleId: module.moduleId,
+                          moduleName: module.moduleName,
+                          months: module.months.map((month: any) => ({
+                              monthId: month.monthId,
+                              monthName: month.monthName,
+                              videos:  month.videos.map((video: any) => ({
+                                videoId: video.videoId,
+                                videoTitle: video.videoTitle,
+                                videoUrl: video.videoUrl,
+                                description: video.description,
+                                duration: video.duration,
+                                thumbnailUrl: video.thumbnailUrl
+                              }))
+                          }))
+                      }))
+                  }))
+                  }    
+                }
               };
+      
             case "Year":
               if (!item.year || !item.year.course) {
                 console.warn("Missing year or course data for item:", item);
@@ -124,16 +148,33 @@ import { UserWithProfile } from "../@types/types";
               }
               return {
                 type: "Year",
-                course: {
-                  ...item.year.course,
-                },
                 details: {
-                  yearId: item.year.yearId,
-                  courseId: item.year.courseId,
-                  yearName: item.year.yearName,
-                  modules: item.year.modules,
-                },
+                  [item.year.course.courseId]: {
+                      courseName: item.year.course.courseName,
+                      years: {
+                          yearId: item.year.yearId,
+                          yearName: item.year.yearName,
+                          modules: item.year.modules.map((module: any) => ({
+                              moduleId: module.moduleId,
+                              moduleName: module.moduleName,
+                              months: module.months.map((month: any) => ({
+                                  monthId: month.monthId,
+                                  monthName: month.monthName,
+                                  videos: month.videos.map((video: any) => ({
+                                    videoId: video.videoId,
+                                    videoTitle: video.videoTitle,
+                                    videoUrl: video.videoUrl,
+                                    description: video.description,
+                                    duration: video.duration,
+                                    thumbnailUrl: video.thumbnailUrl
+                                  }))
+                              }))
+                          }))
+                    }
+                  }
+              }
               };
+      
             case "Module":
               if (!item.module || !item.module.course || !item.module.year) {
                 console.warn("Missing module, course, or year data for item:", item);
@@ -141,20 +182,34 @@ import { UserWithProfile } from "../@types/types";
               }
               return {
                 type: "Module",
-                course: {
-                  ...item.module.course,
-                },
-                year: {
-                  ...item.module.year,
-                },
                 details: {
-                  moduleId: item.module.moduleId,
-                  courseId: item.module.courseId,
-                  yearId: item.module.yearId,
-                  moduleName: item.module.moduleName,
-                  months: item.module.months,
-                },
+                  [item.module.course.courseId]: {
+                    courseName: item.module.course.courseName,
+                    years: {
+                      yearId: item.module.year.yearId,
+                      yearName: item.module.year.yearName,
+                      modules: {
+                        moduleId: item.module.moduleId,
+                        moduleName: item.module.moduleName,
+                        months: item.module.months.map((month: any) => ({
+                          monthId: month.monthId,
+                          monthName: month.monthName,
+                          videos:  month.videos.map((video: any) => ({
+                            videoId: video.videoId,
+                            videoTitle: video.videoTitle,
+                            videoUrl: video.videoUrl,
+                            description: video.description,
+                            duration: video.duration,
+                            thumbnailUrl: video.thumbnailUrl
+                          }))
+                        }))
+                      }
+                    }
+                  }
+                }
               };
+
+      
             case "Month":
               if (!item.month || !item.month.course || !item.month.year) {
                 console.warn("Missing month, course, or year data for item:", item);
@@ -162,23 +217,33 @@ import { UserWithProfile } from "../@types/types";
               }
               return {
                 type: "Month",
-                course: {
-                  ...item.month.course,
-                },
-                year: {
-                  ...item.month.year,
-                },
-                module:{
-                  ...item.month.module,
-                },
                 details: {
-                  monthId: item.month.monthId,
-                  vimeoMonthId: item.month.vimeoMonthId,
-                  monthName: item.month.monthName,
-                  moduleId: item.month.moduleId,
-                  videos: item.month.videos,
-                },
+                  [item.month.course.courseId]: {
+                    courseName: item.month.course.courseName,
+                    years: {
+                      yearId: item.month.year.yearId,
+                      yearName: item.month.year.yearName,
+                      modules: {
+                        moduleId: item.month.module.moduleId,
+                        moduleName: item.month.module.moduleName,
+                        months: {
+                          monthId: item.month.monthId,
+                          monthName: item.month.monthName,
+                          videos: item.month.videos.map((video: any) => ({
+                            videoId: video.videoId,
+                            videoTitle: video.videoTitle,
+                            videoUrl: video.videoUrl,
+                            description: video.description,
+                            duration: video.duration,
+                            thumbnailUrl: video.thumbnailUrl
+                          }))
+                        }
+                      }
+                    }
+                  }
+                }
               };
+      
             default:
               console.warn("Unknown item type:", item.itemType);
               return null;
@@ -186,6 +251,7 @@ import { UserWithProfile } from "../@types/types";
         })
       ).filter((item) => item !== null);
       
+
       res.status(200).json({
         user: user,
         // orders: userOrders,
@@ -200,3 +266,165 @@ import { UserWithProfile } from "../@types/types";
   };
 
   
+      // const organizeHierarchically = (userOrders: any): ParsedResponse => {
+      //   const parsedResponse: ParsedResponse = {};
+      
+      //   userOrders.forEach((order: any) => {
+      //     order.orderItems.forEach((item: any) => {
+      //       switch (item.itemType) {
+      //         case "Course": {
+      //           if (!item.course) return;
+                
+      //           const courseId = item.course.courseId;
+      //           if (!parsedResponse[courseId]) {
+      //             parsedResponse[courseId] = {
+      //               courseName: item.course.courseName,
+      //               // vimeoCourseId: item.course.vimeoCourseId,
+      //               years: []
+      //             };
+      //           }
+      //           break;
+      //         }
+      
+      //         case "Year": {
+      //           if (!item.year?.course) return;
+                
+      //           const courseId = item.year.course.courseId;
+      //           if (!parsedResponse[courseId]) {
+      //             parsedResponse[courseId] = {
+      //               courseName: item.year.course.courseName,
+      //               // vimeoCourseId: item.year.course.vimeoCourseId,
+      //               years: []
+      //             };
+      //           }
+      
+      //           const yearExists = parsedResponse[courseId].years.some(
+      //             y => y.yearId === item.year.yearId
+      //           );
+      
+      //           if (!yearExists) {
+      //             parsedResponse[courseId].years.push({
+      //               yearId: item.year.yearId,
+      //               yearName: item.year.yearName,
+      //               // vimeoYearId: item.year.vimeoYearId,
+      //               modules: []
+      //             });
+      //           }
+      //           break;
+      //         }
+      
+      //         case "Module": {
+      //           if (!item.module?.course || !item.module?.year) return;
+                
+      //           const courseId = item.module.course.courseId;
+      //           if (!parsedResponse[courseId]) {
+      //             parsedResponse[courseId] = {
+      //               courseName: item.module.course.courseName,
+      //               // vimeoCourseId: item.module.course.vimeoCourseId,
+      //               years: []
+      //             };
+      //           }
+      
+      //           let year = parsedResponse[courseId].years.find(
+      //             y => y.yearId === item.module.yearId
+      //           );
+      
+      //           if (!year) {
+      //             year = {
+      //               yearId: item.module.yearId,
+      //               yearName: item.module.year.yearName,
+      //               // vimeoYearId: item.module.year.vimeoYearId,
+      //               modules: []
+      //             };
+      //             parsedResponse[courseId].years.push(year);
+      //           }
+      
+      //           const moduleExists = year.modules.some(
+      //             m => m.moduleId === item.module.moduleId
+      //           );
+      
+      //           if (!moduleExists) {
+      //             year.modules.push({
+      //               moduleId: item.module.moduleId,
+      //               moduleName: item.module.moduleName,
+      //               months: []
+      //             });
+      //           }
+      //           break;
+      //         }
+      
+      //         case "Month": {
+      //           if (!item.month?.course || !item.month?.year) return;
+                
+      //           const courseId = item.month.course.courseId;
+      //           if (!parsedResponse[courseId]) {
+      //             parsedResponse[courseId] = {
+      //               courseName: item.month.course.courseName,
+      //               // vimeoCourseId: item.month.course.vimeoCourseId,
+      //               years: []
+      //             };
+      //           }
+      
+      //           let year = parsedResponse[courseId].years.find(
+      //             y => y.yearId === item.month.year.yearId
+      //           );
+      
+      //           if (!year) {
+      //             year = {
+      //               yearId: item.month.year.yearId,
+      //               yearName: item.month.year.yearName,
+      //               // vimeoYearId: item.month.year.vimeoYearId,
+      //               modules: []
+      //             };
+      //             parsedResponse[courseId].years.push(year);
+      //           }
+      
+      //           let module = year.modules.find(
+      //             m => m.moduleId === item.month.moduleId
+      //           );
+      
+      //           if (!module) {
+      //             module = {
+      //               moduleId: item.month.moduleId,
+      //               moduleName: item.month.module.moduleName,
+      //               months: []
+      //             };
+      //             year.modules.push(module);
+      //           }
+      
+      //           const monthExists = module.months.some(
+      //             m => m.monthId === item.month.monthId
+      //           );
+      
+      //           if (!monthExists) {
+      //             module.months.push({
+      //               monthId: item.month.monthId,
+      //               monthName: item.month.monthName,
+      //               videos: item.month.videos.map((video: any) => ({
+      //                 videoId: video.videoId,
+      //                 videoTitle: video.videoTitle,
+      //                 videoUrl: video.videoUrl,
+      //                 // videoVimeoId: video.videoVimeoId,
+      //                 description: video.description,
+      //                 duration: video.duration,
+      //                 thumbnailUrl: video.thumbnailUrl
+      //               }))
+      //             });
+      //           }
+      //           break;
+      //         }
+      //       }
+      //     });
+      //   });
+      
+      //   return parsedResponse;
+      // };
+      
+      // // Use in your API response
+      // const parsedData = organizeHierarchically(userOrders);
+      
+      // res.status(200).json({
+      //   user: user,
+      //   orders: parsedData
+      // });
+    

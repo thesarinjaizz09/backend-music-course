@@ -53,53 +53,64 @@ type UserWithoutPassword = {
 
 
 
-type PurchaseDetails = {
-  orderItemId: number;
-  startDate: Date;
-  endDate: Date | null;
-  price: number;
-  status: string;
-}
+type Video = {
+  videoId: number;
+  videoTitle: string;
+  videoUrl: string;
+  description: string;
+  duration: number;
+  thumbnailUrl: string;
+};
 
-type MonthData = {
+type Month = {
   monthId: number;
   monthName: string;
-  isAccessible: boolean;
-}
+  videos: Video[];
+};
 
-type ModuleData = {
+type Module = {
   moduleId: number;
   moduleName: string;
-  isAccessible: boolean;
-  months: MonthData[];
-}
+  months: Month[];
+};
 
-type YearData = {
+type Year = {
   yearId: number;
   yearName: string;
-  isAccessible: boolean;
-  modules: ModuleData[];
-}
+  modules: Module[];
+};
 
-type CourseAccess = {
+type Course = {
   courseId: number;
-  name: string;
-  description: string | null;
-  isFullAccess: boolean;
-  purchases: PurchaseDetails[];
-  years: YearData[];
-}
+  courseName: string;
+  years: Year[];
+};
+
+type OrderItem = {
+  itemType: "Course" | "Year" | "Module" | "Month";
+  course?: Course;
+  year?: Year & { course: Course };
+  module?: Module & { course: Course; year: Year };
+  month?: Month & { course: Course; year: Year; module: Module };
+};
+
+type UserOrder = {
+  orderItems: OrderItem[];
+};
+
 
 export { 
   VimeoFolder, 
   VimeoVideo, 
   UserWithoutPassword, 
   VimeoItem,
-  VimeoResponse,
-  PurchaseDetails,
-  MonthData,
-  ModuleData,
-  YearData,
-  CourseAccess,
+  VimeoResponse, 
+  Video, 
+  Month, 
+  Module, 
+  Year,
+  Course,
+  UserOrder,
+  OrderItem,
   UserWithProfile
 };
