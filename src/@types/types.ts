@@ -51,7 +51,7 @@ type UserWithoutPassword = {
 }
 
 
-
+//userProfile types define start from here
 
 type Video = {
   videoId: number;
@@ -86,17 +86,87 @@ type Course = {
   years: Year[];
 };
 
-type OrderItem = {
-  itemType: "Course" | "Year" | "Module" | "Month";
-  course?: Course;
-  year?: Year & { course: Course };
-  module?: Module & { course: Course; year: Year };
-  month?: Month & { course: Course; year: Year; module: Module };
+type ParsedResponse = {
+  [courseId: number]: Course;
 };
 
-type UserOrder = {
+type ItemType = "Course" | "Year" | "Module" | "Month";
+
+type CourseItem = {
+  itemType: "Course";
+  course: {
+    courseId: number;
+    courseName: string;
+    years: Year[];
+  };
+};
+
+type YearItem = {
+  itemType: "Year";
+  year: {
+    yearId: number;
+    yearName: string;
+    course: {
+      courseId: number;
+      courseName: string;
+    };
+    modules: Module[];
+  };
+};
+
+type ModuleItem = {
+  itemType: "Module";
+  module: {
+    moduleId: number;
+    moduleName: string;
+    course: {
+      courseId: number;
+      courseName: string;
+    };
+    year: {
+      yearId: number;
+      yearName: string;
+    };
+    months: Month[];
+  };
+};
+
+type MonthItem = {
+  itemType: "Month";
+  month: {
+    monthId: number;
+    monthName: string;
+    course: {
+      courseId: number;
+      courseName: string;
+    };
+    year: {
+      yearId: number;
+      yearName: string;
+    };
+    module: {
+      moduleId: number;
+      moduleName: string;
+    };
+    videos: Video[];
+  };
+};
+
+// Combined order item type
+type OrderItem = CourseItem | YearItem | ModuleItem | MonthItem;
+
+// Order type
+type Order = {
   orderItems: OrderItem[];
 };
+
+// Full API response type
+type ApiResponse = {
+  user: UserWithProfile;
+  orders: ParsedResponse;
+};
+
+//userProfile types define end here
 
 
 export { 
@@ -105,12 +175,19 @@ export {
   UserWithoutPassword, 
   VimeoItem,
   VimeoResponse, 
-  Video, 
-  Month, 
-  Module, 
+  UserWithProfile,
+  Video,
+  Month,
+  Module,
   Year,
   Course,
-  UserOrder,
+  ParsedResponse,
+  ItemType,
+  CourseItem,
+  YearItem,
+  ModuleItem,
+  MonthItem,
   OrderItem,
-  UserWithProfile
+  Order,
+  ApiResponse
 };
