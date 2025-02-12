@@ -729,6 +729,7 @@ import { UserWithProfile} from "../@types/types";
                               videos: {
                                 columns: {
                                   videoId: true,
+                                  videoVimeoId: true,
                                   videoTitle: true,
                                   videoUrl: true,
                                   description: true,
@@ -771,6 +772,7 @@ import { UserWithProfile} from "../@types/types";
                           videos: {
                             columns: {
                               videoId: true,
+                              videoVimeoId: true,
                               videoTitle: true,
                               videoUrl: true,
                               description: true,
@@ -811,6 +813,7 @@ import { UserWithProfile} from "../@types/types";
                       videos: {
                         columns: {
                           videoId: true,
+                          videoVimeoId: true,
                           videoTitle: true,
                           videoUrl: true,
                           description: true,
@@ -849,6 +852,7 @@ import { UserWithProfile} from "../@types/types";
                   videos: {
                     columns: {
                       videoId: true,
+                      videoVimeoId: true,
                       videoTitle: true,
                       videoUrl: true,
                       description: true,
@@ -869,7 +873,7 @@ import { UserWithProfile} from "../@types/types";
         order.orderItems.forEach((item) => {
           switch (item.itemType) {
             case "Course": {
-              if (item.course) {
+              if (item.course) { 
                 purchasedDetails[item.course.courseId] = {
                   courseName: item.course.courseName,
                   years: item.course.years.map((year: any) => ({
@@ -883,6 +887,7 @@ import { UserWithProfile} from "../@types/types";
                         monthName: month.monthName,
                         videos: month.videos.map((video: any) => ({
                           videoId: video.videoId,
+                          videoVimeoId: video.videoVimeoId,
                           videoTitle: video.videoTitle,
                           videoUrl: video.videoUrl,
                           description: video.description,
@@ -917,6 +922,7 @@ import { UserWithProfile} from "../@types/types";
                       monthName: month.monthName,
                       videos: month.videos.map((video: any) => ({
                         videoId: video.videoId,
+                        videoVimeoId: video.videoVimeoId,
                         videoTitle: video.videoTitle,
                         videoUrl: video.videoUrl,
                         description: video.description,
@@ -967,6 +973,7 @@ import { UserWithProfile} from "../@types/types";
                     monthName: month.monthName,
                     videos: month.videos.map((video: any) => ({
                       videoId: video.videoId,
+                      videoVimeoId: video.videoVimeoId,
                       videoTitle: video.videoTitle,
                       videoUrl: video.videoUrl,
                       description: video.description,
@@ -1026,6 +1033,7 @@ import { UserWithProfile} from "../@types/types";
                   monthName: item.month.monthName,
                   videos: item.month.videos.map((video: any) => ({
                     videoId: video.videoId,
+                    videoVimeoId: video.videoVimeoId,
                     videoTitle: video.videoTitle,
                     videoUrl: video.videoUrl,
                     description: video.description,
