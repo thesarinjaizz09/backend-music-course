@@ -15,6 +15,7 @@ import {
 import asyncHandler from "../utils/asyncHandler";
 import z from "zod";
 import { changePasswordSchema } from "../schemas/changePasswordSchema";
+import { authenticateGoogleUser } from "../services/auth.service";
 
 // Cookie options for secure storage
 const cookieOptions = {
@@ -326,4 +327,31 @@ const changePassword = asyncHandler(async (req: Request, res: Response) => {
   }
 });
 
-export { registerUser, loginUser, refreshAccessToken, logoutUser,changePassword};
+const googleAuthController = {
+  redirectToGoogle: (req: Request, res: Response) => {
+    res.redirect("https://accounts.google.com/o/oauth2/auth" +
+      "?response_type=code" +
+      `&client_id=${process.env.GOOGLE_CLIENT_ID}` +
+      `&redirect_uri=${process.env.BACKEND_URL}/auth/google/callback` +
+      "&scope=profile email"
+    );
+  },
+
+  googleCallback: asyncHandler(async (req: Request, res: Response) : Promise<void> => {
+    const { code } = req.query;
+
+    if (!code) {
+      throw res.status(400).json({ message: "Authorization code is missing" });
+    }
+
+    try {
+      const tokens = await authenticateGoogleUser(code as string);
+      res.json(tokens);
+    } catch (error) {
+      console.error("Google OAuth Error:", error);
+      res.status(500).json({ message: "Authentication failed" });
+    }
+  }),
+};
+
+export { registerUser, loginUser, refreshAccessToken, logoutUser,changePassword, googleAuthController};
