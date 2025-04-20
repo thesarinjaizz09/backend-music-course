@@ -15,7 +15,7 @@ const createCheckoutSession = async (req: Request, res: Response) :Promise<void>
     try {
         const { courseName, metadata, amount } = req.body;
         const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card', 'cashapp','paypal'],
+            payment_method_types: ['card', 'cashapp'],
             line_items: [
               {
                 price_data: {
