@@ -14,6 +14,7 @@ app.use(cors({
     credentials: true,
 }));
 
+app.use("/api/v1", paymentRouter);
 app.use((req, res, next) => {
     if(req.originalUrl === '/api/v1/webhook'){
         next()
@@ -30,6 +31,5 @@ app.get("/api/hello", (req:Request, res:Response) => {
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/modules", moduleRouter);
 app.use("/api/v1/profiles", userProfileRouter);
-app.use("/api/v1", paymentRouter);
 
 export default app;
