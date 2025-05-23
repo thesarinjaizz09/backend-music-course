@@ -32,23 +32,6 @@ const createCheckoutSession = async (req: Request, res: Response) :Promise<void>
             mode: 'payment',
             invoice_creation: {
                 enabled: true,
-                // invoice_data: {
-                //   description: 'Invoice for courseName',
-                //   metadata: {
-                //     order: 'Order xyz',
-                //   },
-                // //   account_tax_ids: ['DE123456789'],
-                //   custom_fields: [
-                //     {
-                //       name: "Purchase Order",
-                //       value: amount,
-                //     },
-                //   ],
-                //   rendering_options: {
-                //     amount_tax_display: 'include_inclusive_tax',
-                //   },
-                //   footer: 'Dhwani Academy',
-                // },
               },
             success_url: SUCCESS_URL,
             cancel_url: CANCEL_URL,

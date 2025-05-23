@@ -3,7 +3,6 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import userRouter from './routes/user.routes';
 import { Express } from 'express';
-import moduleRouter from './routes/module.routes';
 import userProfileRouter from './routes/profile.routes';
 import paymentRouter from './routes/payment.routes';
 
@@ -28,7 +27,6 @@ app.get("/api/hello", (req:Request, res:Response) => {
     res.json("Welcome to the API");
 });
 app.use("/api/v1/users", userRouter);
-app.use("/api/v1/modules", moduleRouter);
 app.use("/api/v1/profiles", userProfileRouter);
 app.use("/api/v1", paymentRouter);
 

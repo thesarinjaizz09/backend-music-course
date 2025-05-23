@@ -3,11 +3,13 @@ import { eq } from "drizzle-orm";
 import { Request, Response, NextFunction } from "express";
 import db from "../db/db_connect";
 import { 
+  userProfiles,
   users, 
 } from "../models";
 import ApiError from "../utils/ApiError";
 import { UserWithProfile} from "../@types/types";
-
+import { updateUserSchema } from "../schemas/userProfileSchema";
+import { v4 as uuidv4 } from 'uuid';
 
 
   export const getUserProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -414,3 +416,88 @@ import { UserWithProfile} from "../@types/types";
       throw new ApiError(500, 'Internal Server Error');
     }
   };
+
+
+  export const updateUserDetails = async (req: Request, res: Response): Promise<void>  => {
+    //parsed data from request body
+    //check if user exists
+    //if user exists then update the users table and userProfiles tables
+    //if the profile doesn't exist then insert otherwise update it
+    //find the updated user and remove the password field
+    //send back the updated values
+  try {
+    const parsed = updateUserSchema.safeParse(req.body);
+    if (!parsed.success) {
+       res.status(400).json({ error: parsed.error.flatten() });
+       return;
+    }
+
+    const { userId, username, email, fullName, gender } = parsed.data;
+
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.userId, userId),
+    });
+
+    if (!existingUser) {
+       res.status(404).json({ error: 'User not found' });
+        return;
+    }
+
+    if (username || email) {
+      await db
+        .update(users)
+        .set({
+          ...(username && { username }),
+          ...(email && { email }),
+        })
+        .where(eq(users.userId, userId));
+    }
+
+    const existingProfile = await db.query.userProfiles.findFirst({
+      where: eq(userProfiles.userId, userId),
+    });
+
+    if (fullName || gender) {
+      if (existingProfile) {
+        await db
+          .update(userProfiles)
+          .set({
+            ...(fullName && { fullName }),
+            ...(gender && { gender }),
+          })
+          .where(eq(userProfiles.userId, userId));
+      } else {
+        await db.insert(userProfiles).values({
+          id: uuidv4(),
+          userId,
+          fullName: fullName || null,
+          gender: gender || 'male', 
+        });
+      }
+    }
+
+    const updatedUser = await db.query.users.findFirst({
+      where: eq(users.userId, userId),
+      with: {
+        profile: true,
+      },
+    });
+
+    if (!updatedUser) {
+      res.status(500).json({ error: 'Failed to fetch updated user.' });
+      return;
+    }
+
+    const { password, ...safeUser } = updatedUser;
+
+    res.status(200).json({
+      message: 'User details updated successfully.',
+      user: safeUser,
+    });
+     return;
+  } catch (error) {
+    console.error('Update failed:', error);
+    res.status(500).json({ error: 'Internal server error.' });
+     return;
+  }
+};

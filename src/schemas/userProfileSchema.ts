@@ -1,10 +1,11 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-export const userProfileSchema = z.object({
-    firstName: z.string().min(2).max(50),
-    lastName: z.string().min(2).max(50),
-    dateOfBirth: z.string(),
-    gender: z.string().min(4).max(15),
+export const updateUserSchema = z.object({
+  userId: z.number(),
+  username: z.string().min(3).max(255).optional(),
+  email: z.string().email().optional(),
+  fullName: z.string().min(2).max(100).optional(),
+  gender: z.enum(['male', 'female']).optional(),
 });
 
-export type UserProfile = z.infer<typeof userProfileSchema>;
+export type UserProfile = z.infer<typeof updateUserSchema>;
