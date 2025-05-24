@@ -10,6 +10,7 @@ import ApiError from "../utils/ApiError";
 import { UserWithProfile} from "../@types/types";
 import { updateUserSchema } from "../schemas/userProfileSchema";
 import { v4 as uuidv4 } from 'uuid';
+import { userWithProfileSchema } from "../schemas/userWithProfileSchema";
 
 
   export const getUserProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -499,5 +500,48 @@ import { v4 as uuidv4 } from 'uuid';
     console.error('Update failed:', error);
     res.status(500).json({ error: 'Internal server error.' });
      return;
+  }
+};
+
+export const getProfile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId, email } = req.user ?? {};
+
+    if (!userId && !email) {
+      res.status(400).json({ message: 'Missing user identity' });
+      return;
+    }
+
+    const result = await db
+      .select({
+        userId: users.userId,
+        username: users.username,
+        email: users.email,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+        profile: {
+          id: userProfiles.id,
+          fullName: userProfiles.fullName,
+          gender: userProfiles.gender,
+          createdAt: userProfiles.createdAt,
+          updatedAt: userProfiles.updatedAt,
+        },
+      })
+      .from(users)
+      .leftJoin(userProfiles, eq(users.userId, userProfiles.userId))
+      .where(userId ? eq(users.userId, userId) : eq(users.email, email))
+      .limit(1)
+      .then((rows) => rows[0]);
+
+    if (!result) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    const validated = userWithProfileSchema.parse(result);
+    res.status(200).json({ user: validated });
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
