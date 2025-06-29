@@ -52,8 +52,8 @@ const registerAdmin = asyncHandler(async (req: Request, res: Response) => {
     const [newAdmin]: NewAdmin[] = await db
       .insert(admins)
       .values({
-        email: validatedData.email,
         name: validatedData.name, 
+        email: validatedData.email,
         password: hashedPassword,
         role: 'user', 
         isActive: true,
