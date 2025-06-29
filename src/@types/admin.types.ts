@@ -1,6 +1,7 @@
 // @types/admin.types.ts
 export interface AdminWithoutPassword {
   adminId: number;
+  name: string;
   email: string;
   role: 'user' | 'admin';
   isActive: boolean;

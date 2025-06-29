@@ -11,6 +11,7 @@ export const adminRoleEnum = pgEnum('admin_role', ['user', 'admin']);
 export const admins = pgTable('admins', {
   adminId: serial('admin_id').primaryKey(),
   email: varchar('email', { length: 255 }).notNull().unique(),
+  name: varchar('username', { length: 255 }).notNull(),
   password: varchar('password', { length: 255 }).notNull(),
   role: adminRoleEnum('role').default('user').notNull(), 
   isActive: boolean('is_active').default(true).notNull(),

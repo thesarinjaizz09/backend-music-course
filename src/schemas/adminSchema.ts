@@ -1,5 +1,10 @@
 // schemas/adminActionSchema.ts
 import { z } from 'zod';
+export const usernameValidation = z
+    .string()
+    .min(3, "Username must be atleast 3 characters")
+    .max(25, "Username must be atmost 25 characters")
+    .regex(/^[a-zA-Z0-9]+$/, "Username can only contain alphanumeric characters")
 
 const passwordSchema = z.string().min(8, "Password must be at least 8 characters long")
                         .regex(
@@ -8,6 +13,7 @@ const passwordSchema = z.string().min(8, "Password must be at least 8 characters
                         );
 
 export const adminSignUpSchema = z.object({
+  name: usernameValidation,
   email: z.string().email('Invalid email format'),
   password: passwordSchema,
 });
