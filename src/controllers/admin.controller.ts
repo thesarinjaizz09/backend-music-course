@@ -98,16 +98,18 @@ const registerAdmin = asyncHandler(async (req: Request, res: Response) => {
     });
     
     res
-      .status(201)
+      .status(200)
       .json(
         new ApiResponse(
-          201,
+          200,
           { 
             admin: adminWithoutPassword,
-            adminAccessToken: accessToken,      
-            adminRefreshToken: refreshToken,
+            tokens: {
+              adminAccessToken: accessToken,      
+              adminRefreshToken: refreshToken,
+            }
           },
-          "Admin user created successfully. Contact an administrator to upgrade your permissions."
+           "Admin registered and logged in successfully"
         )
       );
   } catch (error) {
@@ -184,8 +186,10 @@ const loginAdmin = asyncHandler(async (req: Request, res: Response) => {
         200,
         {
           admin: adminWithoutPassword,
-          adminAccessToken: accessToken,      
-          adminRefreshToken: refreshToken,
+          tokens: {
+              adminAccessToken: accessToken,      
+              adminRefreshToken: refreshToken,
+            }
         },
         "Admin logged in successfully"
       )
@@ -308,7 +312,12 @@ const refreshAdminAccessToken = asyncHandler(async (req: Request, res: Response)
       .json(
         new ApiResponse(
           200,
-          { adminAccessToken: newAccessToken, adminRefreshToken: newRefreshToken },
+          { 
+            tokens:{
+              adminAccessToken: newAccessToken,
+              adminRefreshToken: newRefreshToken 
+            }
+          },
           "Admin access token refreshed successfully"
         )
       );
