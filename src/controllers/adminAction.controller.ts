@@ -233,7 +233,8 @@ const getAllAdmins = asyncHandler(async (req: AdminRequest, res: Response) => {
     }
 
     const adminsList = await db.select({
-      adminId: admins.adminId,
+      id: admins.adminId,
+      name: admins.name,
       email: admins.email,
       role: admins.role,
       isActive: admins.isActive,
