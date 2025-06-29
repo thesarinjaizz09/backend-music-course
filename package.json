@@ -8,7 +8,9 @@
     "dev": "nodemon --files ./src/index.ts",
     "build": "tsc",
     "postinstall": "drizzle-kit generate",
-    "sync": "ts-node src/services/vimeoPollingService.ts"
+    "sync": "ts-node src/services/vimeoPollingService.ts",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "author": "",
   "license": "ISC",

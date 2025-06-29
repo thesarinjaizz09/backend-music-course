@@ -2,6 +2,8 @@ import { pgTable, serial, varchar } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
 import { years } from './year.model';
+import { exams } from './exam.model';
+import { certificates } from './certificate.model';
 
 export const courses = pgTable('courses', {
   courseId: serial('course_id').primaryKey(),
@@ -11,6 +13,8 @@ export const courses = pgTable('courses', {
 
 export const coursesRelations = relations(courses, ({ many }) => ({
   years: many(years),
+  exams: many(exams),
+  certificates: many(certificates)
 }));
 
 export type Course = typeof courses.$inferSelect;

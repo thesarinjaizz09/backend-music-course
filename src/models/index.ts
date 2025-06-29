@@ -8,3 +8,8 @@ export * from './order.model';
 export * from './orderItem.model';
 export * from './profile.model';
 export * from './refreshTokens.model';
+export * from './admin.model';
+export * from './assignment.model';
+export * from './certificate.model';
+export * from './mcq.model';
+export * from './adminRefreshToken.model'

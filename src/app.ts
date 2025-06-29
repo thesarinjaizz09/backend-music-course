@@ -5,6 +5,7 @@ import userRouter from './routes/user.routes';
 import { Express } from 'express';
 import userProfileRouter from './routes/profile.routes';
 import paymentRouter from './routes/payment.routes';
+import adminRoutes from './routes/admin.routes';
 
 const app: Express = express();
 
@@ -29,5 +30,6 @@ app.get("/api/hello", (req:Request, res:Response) => {
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/profiles", userProfileRouter);
 app.use("/api/v1", paymentRouter);
+app.use("/api/v1/admin", adminRoutes);
 
 export default app;
