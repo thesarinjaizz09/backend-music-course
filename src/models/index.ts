@@ -12,4 +12,5 @@ export * from './admin.model';
 export * from './assignment.model';
 export * from './certificate.model';
 export * from './mcq.model';
-export * from './adminRefreshToken.model'
+export * from './adminRefreshToken.model';
+export * from './exam.model';

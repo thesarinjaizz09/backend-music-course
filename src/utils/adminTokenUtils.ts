@@ -9,7 +9,7 @@ if (!ADMIN_ACCESS_TOKEN_SECRET || !ADMIN_REFRESH_TOKEN_SECRET) {
   throw new Error('Admin JWT secrets must be defined in environment variables');
 }
 
-// Generate Admin Access Token
+
 export const generateAdminAccessToken = (admin: AdminWithoutPassword): string => {
     return jwt.sign(
         { admin }, 
@@ -20,7 +20,7 @@ export const generateAdminAccessToken = (admin: AdminWithoutPassword): string =>
     );
 };
 
-// Generate Admin Refresh Token
+
 export const generateAdminRefreshToken = (admin: AdminWithoutPassword): string => {
     return jwt.sign(
         { admin }, 
@@ -31,7 +31,7 @@ export const generateAdminRefreshToken = (admin: AdminWithoutPassword): string =
     );
 };
 
-// Verify Admin Access Token
+
 export const verifyAdminAccessToken = (token: string) => {
     try {
       const decoded = jwt.verify(token, ADMIN_ACCESS_TOKEN_SECRET) as AdminJWTPayload;
@@ -41,7 +41,7 @@ export const verifyAdminAccessToken = (token: string) => {
     }
 };
 
-// Verify Admin Refresh Token
+
 export const verifyAdminRefreshToken = (token: string) => {
     try {
       const decoded = jwt.verify(token, ADMIN_REFRESH_TOKEN_SECRET) as AdminJWTPayload;

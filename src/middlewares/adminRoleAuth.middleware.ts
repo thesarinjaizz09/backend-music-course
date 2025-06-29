@@ -7,7 +7,7 @@ interface AdminRequest extends Request {
   admin?: AdminWithoutPassword;
 }
 
-// Check if admin has full admin privileges
+
 export const requireAdminRole = (req: AdminRequest, res: Response, next: NextFunction) => {
   try {
     if (!req.admin) {
@@ -38,7 +38,7 @@ export const requireAdminRole = (req: AdminRequest, res: Response, next: NextFun
   }
 };
 
-// Check if admin has at least user role (can access dashboard but not admin functions)
+
 export const requireUserRole = (req: AdminRequest, res: Response, next: NextFunction) => {
   try {
     if (!req.admin) {

@@ -5,7 +5,7 @@ type UserProfileWithoutPassword = Omit<User, "password">;
 type ProfileWithoutUserId = Omit<UserProfile, "userId">;
 
 type UserWithProfile = UserProfileWithoutPassword & {
-  profile: ProfileWithoutUserId | null; // Adjust nullability based on your schema
+  profile: ProfileWithoutUserId | null; 
 };
 
 type VimeoFolder =  {
