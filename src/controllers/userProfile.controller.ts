@@ -1,19 +1,30 @@
 
-import { eq } from "drizzle-orm";
+import { and, count, eq, inArray, sql } from "drizzle-orm";
 import { Request, Response, NextFunction } from "express";
 import db from "../db/db_connect";
 import { 
+  assignmentSubmissions,
+  courses,
+  examAttempts,
+  exams,
+  modules,
+  months,
+  orderItems,
+  orders,
   userProfiles,
-  users, 
+  users,
+  years, 
 } from "../models";
 import ApiError from "../utils/ApiError";
 import { UserWithProfile} from "../@types/types";
 import { updateUserSchema } from "../schemas/userProfileSchema";
 import { v4 as uuidv4 } from 'uuid';
 import { userWithProfileSchema } from "../schemas/userWithProfileSchema";
+import { CourseData, ExamData, ExamWeek, ModuleData, MonthData, YearData } from "../@types/profile.types";
 
 
-  export const getUserProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+
+export const getUserProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user || !req.user.userId) {
         throw new ApiError(401, 'Unauthorized');
@@ -416,10 +427,10 @@ import { userWithProfileSchema } from "../schemas/userWithProfileSchema";
       console.error('Error in getUserProfile:', error);
       throw new ApiError(500, 'Internal Server Error');
     }
-  };
+};
 
 
-  export const updateUserDetails = async (req: Request, res: Response): Promise<void>  => {
+export const updateUserDetails = async (req: Request, res: Response): Promise<void>  => {
     //parsed data from request body
     //check if user exists
     //if user exists then update the users table and userProfiles tables
@@ -503,6 +514,7 @@ import { userWithProfileSchema } from "../schemas/userWithProfileSchema";
   }
 };
 
+
 export const getProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId, email } = req.user ?? {};
@@ -537,11 +549,310 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
       res.status(404).json({ message: 'User not found' });
       return;
     }
+    const userIdToUse = result.userId;
+
+    const userOrders = await db
+      .select({
+        orderId: orders.orderId,
+        itemType: orderItems.itemType,
+        itemName: orderItems.itemName,
+        paymentStatus: orders.paymentStatus,
+      })
+      .from(orders)
+      .innerJoin(orderItems, eq(orders.orderId, orderItems.orderId))
+      .where(
+        and(
+          eq(orders.userId, userIdToUse),
+          eq(orders.paymentStatus, 'succeeded')
+        )
+      );
+
+    if (userOrders.length === 0) {
+      const validated = userWithProfileSchema.parse(result);
+      res.status(200).json({ 
+        user: validated,
+        courses: []
+      });
+      return;
+    }
+    const purchasedCourses = userOrders
+      .filter(item => item.itemType.toLowerCase() === 'course')
+      .map(item => item.itemName);
+
+    if (purchasedCourses.length === 0) {
+      const validated = userWithProfileSchema.parse(result);
+      res.status(200).json({ 
+        user: validated,
+        courses: []
+      });
+      return;
+    }
+
+    const courseData = await db
+      .select({
+        courseId: courses.courseId,
+        courseName: courses.courseName,
+      })
+      .from(courses)
+      .where(inArray(courses.courseName, purchasedCourses));
+
+    if (courseData.length === 0) {
+      const validated = userWithProfileSchema.parse(result);
+      res.status(200).json({ 
+        user: validated,
+        courses: []
+      });
+      return;
+    }
+    const courseIds = courseData.map(c => c.courseId);
+
+    const yearData = await db
+      .select({
+        yearId: years.yearId,
+        yearName: years.yearName,
+        courseId: years.courseId,
+      })
+      .from(years)
+      .where(inArray(years.courseId, courseIds));
+
+    const yearIds = yearData.map(y => y.yearId);
+
+    const moduleData = await db
+      .select({
+        moduleId: modules.moduleId,
+        moduleName: modules.moduleName,
+        courseId: modules.courseId,
+        yearId: modules.yearId,
+      })
+      .from(modules)
+      .where(inArray(modules.yearId, yearIds));
+
+
+    const moduleIds = moduleData.map(m => m.moduleId);
+
+    const monthData = await db
+      .select({
+        monthId: months.monthId,
+        monthName: months.monthName,
+        courseId: months.courseId,
+        yearId: months.yearId,
+        moduleId: months.moduleId,
+      })
+      .from(months)
+      .where(inArray(months.moduleId, moduleIds));
+
+    const examData = await db
+      .select({
+        examId: exams.examId,
+        courseId: exams.courseId,
+        yearId: exams.yearId,
+        weekNumber: exams.weekNumber,
+        type: exams.type,
+        title: exams.title,
+        totalMarks: exams.totalMarks,
+      })
+      .from(exams)
+      .where(
+        and(
+          inArray(exams.courseId, courseIds),
+          inArray(exams.yearId, yearIds)
+        )
+      );
+    const examIds = examData.map(exam => exam.examId);
+
+    // Fetch user's exam attempts
+    const examAttemptsData = await db
+      .select({
+        attemptId: examAttempts.attemptId,
+        examId: examAttempts.examId,
+        attemptNumber: examAttempts.attemptNumber,
+        passed: examAttempts.passed,
+        submittedAt: examAttempts.submittedAt,
+        gradedAt: examAttempts.gradedAt,
+      })
+      .from(examAttempts)
+      .where(
+        and(
+          eq(examAttempts.userId, userIdToUse),
+          inArray(examAttempts.examId, examIds)
+        )
+      );
+
+    // Fetch assignment submissions
+    const assignmentSubmissionsData = await db
+      .select({
+        examId: assignmentSubmissions.examId,
+        attemptId: assignmentSubmissions.attemptId,
+        totalMarks: assignmentSubmissions.totalMarks,
+        isChecked: assignmentSubmissions.isChecked,
+        passed: assignmentSubmissions.passed,
+        feedback: assignmentSubmissions.feedback,
+      })
+      .from(assignmentSubmissions)
+      .where(
+        and(
+          eq(assignmentSubmissions.userId, userIdToUse),
+          inArray(assignmentSubmissions.examId, examIds)
+        )
+      );
+
+    // Structure the data hierarchically
+    const structuredData: CourseData[] = courseData
+      .map(course => {
+        const courseYears = yearData.filter(year => year.courseId === course.courseId);
+        
+        const filteredYears: YearData[] = courseYears
+          .map(year => {
+            const yearModules = moduleData.filter(module => 
+              module.courseId === course.courseId && module.yearId === year.yearId
+            );
+             
+            const filteredModules: ModuleData[] = yearModules
+              .map(module => {
+                const moduleMonths = monthData.filter(month => 
+                  month.moduleId === module.moduleId
+                );
+                
+                const filteredMonths: MonthData[] = moduleMonths
+                  .map(month => {
+                    const monthExams = getExamsForMonth(month, examData, year.yearId);
+                    const weeks = generateWeeksForMonth(month, monthExams, examAttemptsData, assignmentSubmissionsData);
+                    
+                    // Only return month if it has exam weeks
+                    if (weeks.length > 0) {
+                      return {
+                        monthId: month.monthId,
+                        monthName: month.monthName,
+                        weeks: weeks
+                      };
+                    }
+                    return null;
+                  })
+                  .filter((month): month is MonthData => month !== null);
+                
+                // Only return module if it has months with exams
+                if (filteredMonths.length > 0) {
+                  return {
+                    moduleId: module.moduleId,
+                    moduleName: module.moduleName,
+                    months: filteredMonths
+                  };
+                }
+                return null;
+              })
+              .filter((module): module is ModuleData => module !== null);
+            
+            // Only return year if it has modules with exams
+            if (filteredModules.length > 0) {
+              return {
+                yearId: year.yearId,
+                yearName: year.yearName,
+                modules: filteredModules
+              };
+            }
+            return null;
+          })
+          .filter((year): year is YearData => year !== null);
+        
+        if (filteredYears.length > 0) {
+          return {
+            courseId: course.courseId,
+            courseName: course.courseName,
+            years: filteredYears
+          };
+        }
+        return null;
+      })
+      .filter((course): course is CourseData => course !== null);
 
     const validated = userWithProfileSchema.parse(result);
-    res.status(200).json({ user: validated });
+    
+    res.status(200).json({ 
+      user: validated,
+      courses: structuredData
+    });
+    
   } catch (error) {
     console.error('Error fetching profile:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+//Hepler functions for getProfile
+function getExamsForMonth(month: any, examData: any[],  yearId: number): any[] {
+  const monthName = month.monthName;
+  const monthNumber = parseInt(monthName.replace('Month ', ''));
+  
+  const examWeeks: number[] = [];
+  const yearBaseMonth = (yearId - 1) * 12;
+  const relativeMonth = monthNumber - yearBaseMonth;
+  
+  switch (relativeMonth) {
+    case 4: examWeeks.push(13); break;
+    case 7: examWeeks.push(26); break;
+    case 10: examWeeks.push(39); break;
+    case 12: examWeeks.push(52); break;
+  }
+  
+  return examData.filter(exam => 
+    examWeeks.includes(exam.weekNumber) && exam.yearId === yearId
+  );
+}
+
+//Hepler functions for getProfile
+function generateWeeksForMonth(
+  month: any, 
+  monthExams: any[], 
+  examAttemptsData: any[], 
+  assignmentSubmissionsData: any[]
+): ExamWeek[] {
+  const weeks: ExamWeek[] = [];
+  
+  if (monthExams.length > 0) {
+    const weekMap = new Map<number, ExamData[]>();
+    
+    monthExams.forEach(exam => {
+      if (!weekMap.has(exam.weekNumber)) {
+        weekMap.set(exam.weekNumber, []);
+      }
+      
+      const userAttempts = examAttemptsData.filter(attempt => attempt.examId === exam.examId);
+      const latestAttempt = userAttempts.length > 0 
+        ? userAttempts.reduce((latest, current) => 
+            current.attemptNumber > latest.attemptNumber ? current : latest
+          )
+        : null;
+      
+      const examSubmission = assignmentSubmissionsData.find(sub => sub.examId === exam.examId);
+      
+      const cleared = latestAttempt?.passed || false;
+      const attempts = userAttempts.length;
+      const review = examSubmission?.isChecked === false && examSubmission?.passed === null;
+      const failed = latestAttempt?.passed === false || examSubmission?.passed === false;
+      
+      let marks = null;
+      if (exam.type === 'final' && examSubmission?.totalMarks) {
+        marks = parseFloat(examSubmission.totalMarks);
+      }
+      
+      weekMap.get(exam.weekNumber)!.push({
+        examId: exam.examId,
+        title: exam.title,
+        type: exam.type,
+        cleared,
+        attempts,
+        review,
+        failed,
+        marks
+      });
+    }); 
+
+    for (const [weekNumber, exams] of weekMap.entries()) {
+      weeks.push({ weekNumber, exams });
+    }
+    
+    weeks.sort((a, b) => a.weekNumber - b.weekNumber);
+  }
+  
+  return weeks;
+}

@@ -12,7 +12,6 @@ import { resolveMultipleOrderItems } from '../utils/orderHelpers';
 import { 
   exams as examsTable, 
   mcqQuestions,
-  mcqResponses, 
   mcqOptions, 
   examAttempts,
   assignmentSubmissions,
@@ -30,8 +29,6 @@ import {
 
 import {
   checkAssignmentReAttemptEligibility,
-  checkIfAlreadyPassed,
-  checkMcqAttemptLimit,
   getAssignmentQuestions,
   getFinalExamSections
 } from './exam.helper.controller';
@@ -332,12 +329,6 @@ async function checkExamUnlocked(userId: number, examId: number): Promise<boolea
     if (examResults.length === 0) return false;
 
     const currentExam = examResults[0];
-
-    // For now, return true - implement detailed unlocking logic later
-    // This is where you'd check:
-    // - Previous MCQ exam completions
-    // - Video completion requirements
-    // - Assignment submission requirements
     return true;
   } catch (error) {
     console.error('Error checking exam unlock status:', error);

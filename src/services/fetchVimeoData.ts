@@ -54,7 +54,6 @@ async function processFolder(courseId: number, folderId: string) {
   const processedYearIds = new Set<string>();
   const processedMonthIds = new Set<string>();
 
-  // Filter and process years, extract year numbers, and sort them
   const yearItems = folderContents
     .filter(item => item.type === 'folder' && item.folder?.name.startsWith('Year'))
     .map(item => ({
@@ -62,7 +61,7 @@ async function processFolder(courseId: number, folderId: string) {
       yearId: item.folder!.uri.split('/').pop()!,
       yearNumber: parseInt(item.folder!.name.replace('Year ', ''), 10),
     }))
-    .sort((a, b) => a.yearNumber - b.yearNumber); // Sort by year number
+    .sort((a, b) => a.yearNumber - b.yearNumber); 
 
 
   for (const yearItem of yearItems) {
@@ -71,7 +70,7 @@ async function processFolder(courseId: number, folderId: string) {
     console.log('Year ID:', yearId);
     processedYearIds.add(yearId);
 
-    // Update or insert year
+
     const [year] = await db.insert(years)
       .values({ courseId, yearName, vimeoYearId: yearId })
       .onConflictDoUpdate({
@@ -88,7 +87,7 @@ async function processFolder(courseId: number, folderId: string) {
         monthName: item.folder!.name,
         monthNumber: parseInt(item.folder!.name.replace('Month ', ''), 10),
       }))
-      .sort((a, b) => a.monthNumber - b.monthNumber); // Sort by month number
+      .sort((a, b) => a.monthNumber - b.monthNumber); 
 
       const startingModuleNumber = (yearNumber - 1) * 4 + 1;
 
@@ -97,7 +96,7 @@ async function processFolder(courseId: number, folderId: string) {
         const moduleName = `Module ${currentModuleNumber}`;
         console.log("Module Name: ", moduleName);
         
-        // Insert or update module
+
         const [module] = await db.insert(modules)
           .values({ courseId: courseId, yearId: year.yearId, moduleName})
           .onConflictDoUpdate({
@@ -106,9 +105,8 @@ async function processFolder(courseId: number, folderId: string) {
           })
           .returning();
 
-        // const startingMonthIndex = (currentModuleNumber - 1) * 3;
+       
         const moduleMonths = monthItems.slice(moduleIndex * 3, moduleIndex * 3 + 3);
-        // Associate months with this module
         for (let i = 0; i < moduleMonths.length; i++) {
           const month = moduleMonths[i];
           await db.insert(months)
@@ -129,8 +127,7 @@ async function processFolder(courseId: number, folderId: string) {
           const monthFromDb = await db.select().from(months)
             .where(eq(months.vimeoMonthId, month.monthId))
             .limit(1);
-  
-          // Process videos for the current month
+
           const videoContents = await getFolderContents(month.monthId);
           const processedVideoIds = new Set<string>();
   

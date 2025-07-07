@@ -1,6 +1,6 @@
 import { User, UserProfile } from "../models";
 
-//userProfile types
+
 type UserProfileWithoutPassword = Omit<User, "password">;
 type ProfileWithoutUserId = Omit<UserProfile, "userId">;
 
@@ -51,7 +51,6 @@ type UserWithoutPassword = {
 }
 
 
-//userProfile types define start from here
 
 type Video = {
   videoId: number;
@@ -152,21 +151,21 @@ type MonthItem = {
   };
 };
 
-// Combined order item type
+
 type OrderItem = CourseItem | YearItem | ModuleItem | MonthItem;
 
-// Order type
+
 type Order = {
   orderItems: OrderItem[];
 };
 
-// Full API response type
+
 type ApiResponse = {
   user: UserWithProfile;
   orders: ParsedResponse;
 };
 
-//userProfile types define end here
+
 
 
 export { 
