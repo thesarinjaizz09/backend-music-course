@@ -186,7 +186,6 @@ This project is licensed under the [MIT License](LICENSE).
 For questions, feedback, or collaboration:
 
 * Raise an issue on [GitHub](https://github.com/EpicAryan/backend-music-course/issues)
-* Connect on [Twitter](https://twitter.com/_epicaryan)
 
 ---
 
