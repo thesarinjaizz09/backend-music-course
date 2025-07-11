@@ -825,10 +825,22 @@ function generateWeeksForMonth(
       
       const examSubmission = assignmentSubmissionsData.find(sub => sub.examId === exam.examId);
       
-      const cleared = latestAttempt?.passed || false;
       const attempts = userAttempts.length;
-      const review = examSubmission?.isChecked === false && examSubmission?.passed === null;
-      const failed = latestAttempt?.passed === false || examSubmission?.passed === false;
+      
+
+      let cleared = false;
+      let review = false;
+      let failed = false;
+      
+      if (latestAttempt?.passed === true || examSubmission?.passed === true) {
+        cleared = true;
+      }
+      else if (examSubmission?.isChecked === false && examSubmission?.passed === null) {
+        review = true;
+      }
+      else if (latestAttempt?.passed === false || examSubmission?.passed === false) {
+        failed = true;
+      }
       
       let marks = null;
       if (exam.type === 'final' && examSubmission?.totalMarks) {
