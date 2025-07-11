@@ -19,10 +19,13 @@ import {
   toggleAdminStatus
 } from '../controllers/adminAction.controller';
 
+import { 
+  getExamAttemptsForReview, 
+} from '../controllers/admin/examAttempts.controller';
 
 const router = Router();
 
-
+router.get('/exam-attempts', getExamAttemptsForReview);
 router.post('/register', registerAdmin);
 router.post('/login', loginAdmin);
 router.post('/refresh-token', refreshAdminAccessToken);
@@ -39,6 +42,9 @@ router.get('/:adminId', requireAdminRole, getAdminDetails);
 router.patch('/role', requireAdminRole, updateAdminRole);
 router.delete('/:adminId', requireAdminRole, deleteAdmin);
 router.patch('/:adminId/toggle-status', requireAdminRole, toggleAdminStatus);
+
+
+// getting all examAttempted by students
 
 
 

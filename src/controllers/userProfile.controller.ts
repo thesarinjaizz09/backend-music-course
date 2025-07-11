@@ -514,7 +514,6 @@ export const updateUserDetails = async (req: Request, res: Response): Promise<vo
   }
 };
 
-
 export const getProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId, email } = req.user ?? {};
