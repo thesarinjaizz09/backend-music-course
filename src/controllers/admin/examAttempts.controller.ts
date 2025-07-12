@@ -24,7 +24,7 @@ export const getExamAttemptsForReview = async (req: Request, res: Response): Pro
       yearId, 
       status = 'all',
       page = 1, 
-      limit = 20 
+      limit = 1000 
     } = req.query;
 
     const offset = (Number(page) - 1) * Number(limit);
