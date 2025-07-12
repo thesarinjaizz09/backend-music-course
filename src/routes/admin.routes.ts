@@ -20,12 +20,13 @@ import {
 } from '../controllers/adminAction.controller';
 
 import { 
-  getExamAttemptsForReview, 
+  getExamAttemptsForReview,
+  updateExamAttempt,
+  uploadCertificate, 
 } from '../controllers/admin/examAttempts.controller';
 
 const router = Router();
 
-router.get('/exam-attempts', getExamAttemptsForReview);
 router.post('/register', registerAdmin);
 router.post('/login', loginAdmin);
 router.post('/refresh-token', refreshAdminAccessToken);
@@ -45,9 +46,9 @@ router.patch('/:adminId/toggle-status', requireAdminRole, toggleAdminStatus);
 
 
 // getting all examAttempted by students
-
-
-
+router.get('/exam-attempts', requireAdminRole, getExamAttemptsForReview);
+router.put('/exam-attempts/:attemptId', requireAdminRole, updateExamAttempt);
+router.post('/exam-attempts/:attemptId/certificate', requireAdminRole, uploadCertificate);
 
 
 
