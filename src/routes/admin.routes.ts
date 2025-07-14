@@ -47,8 +47,8 @@ router.patch('/:adminId/toggle-status', requireAdminRole, toggleAdminStatus);
 
 // getting all examAttempted by students
 router.get('/exam-attempts', requireAdminRole, getExamAttemptsForReview);
-router.put('/exam-attempts/:attemptId', requireAdminRole, updateExamAttempt);
-router.post('/exam-attempts/:attemptId/certificate', requireAdminRole, uploadCertificate);
+router.put('/exam-attempts', requireAdminRole, updateExamAttempt);
+router.post('/exam-attempts/certificate', requireAdminRole, uploadCertificate);
 
 
 

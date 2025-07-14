@@ -285,8 +285,7 @@ async function getFinalExamDetails(attemptId: number) {
 
 export const updateExamAttempt = async (req: AdminRequest, res: Response): Promise<void> => {
   try {
-    const { attemptId } = req.params;
-    const { passed, feedback, marks } = req.body;
+    const { passed, feedback, marks, attemptId } = req.body;
 
     if (typeof passed !== 'boolean') {
       res.status(400).json({
@@ -405,8 +404,7 @@ export const updateExamAttempt = async (req: AdminRequest, res: Response): Promi
 
 export const uploadCertificate = async (req: AdminRequest, res: Response): Promise<void> => {
   try {
-    const { attemptId } = req.params;
-    const { certificateUrl } = req.body;
+    const { certificateUrl, attemptId } = req.body;
 
     if (!certificateUrl) {
       res.status(400).json({
