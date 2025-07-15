@@ -1,7 +1,7 @@
 // controllers/adminAction.controller.ts
 import { Request, Response } from "express";
 import db from "../db/db_connect";
-import { admins, Admin } from "../models";
+import { admins } from "../models";
 import { eq, and, ilike, sql } from "drizzle-orm";
 import ApiError from "../utils/ApiError";
 import ApiResponse from "../utils/ApiResponse";
@@ -341,10 +341,13 @@ const toggleAdminStatus = asyncHandler(async (req: AdminRequest, res: Response) 
   }
 });
 
+
+
+
 export { 
   updateAdminRole, 
   deleteAdmin, 
   getAdminDetails,
   getAllAdmins,
-  toggleAdminStatus
+  toggleAdminStatus,
 };

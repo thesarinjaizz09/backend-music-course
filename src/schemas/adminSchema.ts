@@ -67,3 +67,25 @@ export const deleteAdminSchema = z.object({
     return num;
   })
 });
+
+
+export const getUsersQuerySchema = z.object({
+  search: z.string().optional(),
+  page: z.string().transform(val => Number(val) || 1).default('1'),
+  limit: z.string().transform(val => Number(val) || 20).default('20'),
+  sortBy: z.enum(['username', 'email', 'createdAt', 'updatedAt']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc')
+});
+
+export const getUserParamsSchema = z.object({
+  userId: z.string().transform(val => {
+    const num = Number(val);
+    if (isNaN(num)) {
+      throw new Error('Invalid user ID');
+    }
+    return num;
+  })
+});
+
+type GetUsersQuery = z.infer<typeof getUsersQuerySchema>;
+type GetUserParams = z.infer<typeof getUserParamsSchema>;

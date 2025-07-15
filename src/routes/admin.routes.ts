@@ -6,7 +6,6 @@ import {
   refreshAdminAccessToken,
   logoutAdmin,
   changeAdminPassword,
-  // updateAdminRole,
   // getAdminProfile
 } from '../controllers/admin.controller';
 import adminAuth from '../middlewares/adminAuth.middleware';
@@ -16,7 +15,7 @@ import {
   deleteAdmin, 
   getAdminDetails,
   getAllAdmins,
-  toggleAdminStatus
+  toggleAdminStatus,
 } from '../controllers/adminAction.controller';
 
 import { 
@@ -24,6 +23,7 @@ import {
   updateExamAttempt,
   uploadCertificate, 
 } from '../controllers/admin/examAttempts.controller';
+import { getUsersBasicDetails, getUserSpecificDetails } from '../controllers/admin/users.controller';
 
 const router = Router();
 
@@ -33,9 +33,10 @@ router.post('/refresh-token', refreshAdminAccessToken);
 
 // // Protected routes - require admin authentication
 router.use(adminAuth); 
+router.get('/students', requireAdminRole, getUsersBasicDetails);
 router.post('/logout', logoutAdmin);
 router.post('/change-password', requireUserRole, changeAdminPassword);
-// router.get('/profile', requireUserRole, getAdminProfile);
+
 
 // // Admin-only routes (require 'admin' role)
 router.get('/users', requireAdminRole, getAllAdmins);
@@ -50,13 +51,7 @@ router.get('/exam-attempts', requireAdminRole, getExamAttemptsForReview);
 router.put('/exam-attempts', requireAdminRole, updateExamAttempt);
 router.post('/exam-attempts/certificate', requireAdminRole, uploadCertificate);
 
-
-
-
-
-// Future admin-only routes for exam/course management
-// router.post('/exams', requireAdminRole, createExam);
-// router.get('/assignments/pending', requireAdminRole, getPendingAssignments);
-// router.post('/certificates/issue', requireAdminRole, issueCertificate);
+//get all user details
+router.get('/students/:userId/details', requireAdminRole, getUserSpecificDetails);
 
 export default router;
