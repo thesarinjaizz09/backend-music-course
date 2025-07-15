@@ -39,6 +39,7 @@ router.post('/change-password', requireUserRole, changeAdminPassword);
 
 
 // // Admin-only routes (require 'admin' role)
+router.get('/exam-attempts', requireAdminRole, getExamAttemptsForReview);
 router.get('/users', requireAdminRole, getAllAdmins);
 router.get('/:adminId', requireAdminRole, getAdminDetails);
 router.patch('/role', requireAdminRole, updateAdminRole);
@@ -47,7 +48,6 @@ router.patch('/:adminId/toggle-status', requireAdminRole, toggleAdminStatus);
 
 
 // getting all examAttempted by students
-router.get('/exam-attempts', requireAdminRole, getExamAttemptsForReview);
 router.put('/exam-attempts', requireAdminRole, updateExamAttempt);
 router.post('/exam-attempts/certificate', requireAdminRole, uploadCertificate);
 
