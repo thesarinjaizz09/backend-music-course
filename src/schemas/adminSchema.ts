@@ -72,7 +72,7 @@ export const deleteAdminSchema = z.object({
 export const getUsersQuerySchema = z.object({
   search: z.string().optional(),
   page: z.string().transform(val => Number(val) || 1).default('1'),
-  limit: z.string().transform(val => Number(val) || 20).default('20'),
+  limit: z.string().transform(val => Number(val) || 1000).default('1000'),
   sortBy: z.enum(['username', 'email', 'createdAt', 'updatedAt']).default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc')
 });
