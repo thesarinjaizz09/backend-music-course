@@ -13,7 +13,7 @@ db.$client.connect() // Access the pool via db.$client
     client.release(); // Release the client back to the pool
 
     app.listen(port, () => {
-      console.log(`Example app listening on port ${port}`)
+      console.log(`Dhawi app listening on port ${port}`)
     });
   })
   .catch(error => {

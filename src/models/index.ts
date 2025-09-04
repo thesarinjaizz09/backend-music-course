@@ -15,4 +15,5 @@ export * from './mcq.model';
 export * from './adminRefreshToken.model';
 export * from './exam.model';
 export * from './assignmentQuestion.model';
-export * from './finalExam.model'
+export * from './finalExam.model';
+export * from './videoAnalytics.model';

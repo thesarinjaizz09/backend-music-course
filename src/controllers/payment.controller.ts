@@ -1,42 +1,44 @@
 import { Request, Response } from "express";
 import Stripe from 'stripe'
 import db from "../db/db_connect";
-import { orderItems, orders, users } from "../models";
+import { orderItems, orders, users, videoAnalytics } from "../models";
 import { eq } from "drizzle-orm";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: '2024-12-18.acacia'
 });
-  
+
 const SUCCESS_URL = `${process.env.NEXT_BASE_URL!}/profile`
 const CANCEL_URL = `${process.env.NEXT_BASE_URL!}/buy-course`
-  
-const createCheckoutSession = async (req: Request, res: Response) :Promise<void>=> {
+
+const createCheckoutSession = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { courseName, metadata, amount } = req.body;
+        const { /* The above code appears to be a comment section in a TypeScript file. It includes the
+        variable `courseName` and a multi-line comment delimiter ` */
+            courseName, metadata, amount } = req.body;
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card', 'cashapp'],
             line_items: [
-              {
-                price_data: {
-                  currency: 'usd',
-                  product_data: {
-                    name: courseName,
-                    metadata: metadata,
-                  },
-                  unit_amount: amount, // price in cents
+                {
+                    price_data: {
+                        currency: 'usd',
+                        product_data: {
+                            name: courseName,
+                            metadata: metadata,
+                        },
+                        unit_amount: amount, // price in cents
+                    },
+                    quantity: 1
                 },
-                quantity: 1
-              },
             ],
             mode: 'payment',
             invoice_creation: {
                 enabled: true,
-              },
+            },
             success_url: SUCCESS_URL,
             cancel_url: CANCEL_URL,
             metadata: metadata,
-          })
+        })
         res.status(200).json({ url: session.url })
     } catch (error) {
         console.log(error)
@@ -160,4 +162,4 @@ const handleStripeWebhook = async (req: Request, res: Response) => {
 }
 
 
-export {createCheckoutSession , handleStripeWebhook}
+export { createCheckoutSession, handleStripeWebhook }

@@ -33,7 +33,7 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
   // check for user creation
   // send response
   try {
-   
+
     // Validate user input
     const validatedData = signUpSchema.parse(req.body);
 
@@ -42,13 +42,13 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
       .from(users)
       .where(eq(users.email, validatedData.email))
       .limit(1);
-  
+
     if (existingUser.length > 0) {
       throw new ApiError(409, "User already exists");
     }
-   
+
     const hashedPassword = await hashPassword(validatedData.password);
-  
+
     const [newUser]: NewUser[] = await db
       .insert(users)
       .values({
@@ -59,11 +59,11 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
         updatedAt: new Date(),
       })
       .returning();
-  
-      if (!newUser || !newUser.userId) {
-        throw new ApiError(500, "User creation failed");
-      }
-      
+
+    if (!newUser || !newUser.userId) {
+      throw new ApiError(500, "User creation failed");
+    }
+
     const [savedUser]: User[] = await db
       .select()
       .from(users)
@@ -113,59 +113,59 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
   // access and refresh token generation
   // send cookies
   // send response
- try {
-   const { email, password } = loginSchema.parse(req.body);
-   // find the user
-   const user: User[] = await db
-     .select()
-     .from(users)
-     .where(eq(users.email, email))
-     .limit(1);
+  try {
+    const { email, password } = loginSchema.parse(req.body);
+    // find the user
+    const user: User[] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
 
-   if (user.length === 0) {
-     throw new ApiError(404, "User not found");
-   }
-   // password check
-   const isPasswordValid = await comparePassword(password, user[0].password);
-   if (!isPasswordValid) {
-     throw new ApiError(401, "Invalid credentials");
-   }
- 
-  
-   const { password: _,createdAt, updatedAt, ...userWithoutPassword } = user[0];
+    if (user.length === 0) {
+      throw new ApiError(404, "User not found");
+    }
+    // password check
+    const isPasswordValid = await comparePassword(password, user[0].password);
+    if (!isPasswordValid) {
+      throw new ApiError(401, "Invalid credentials");
+    }
 
-   
-   const accessToken = generateAccessToken(userWithoutPassword);
-   const refreshToken = generateRefreshToken(userWithoutPassword);
-   
-   // store refresh token in the database with expiration time
-   await db.insert(refreshTokens).values({
-     token: refreshToken,
-     userId: user[0].userId,
-     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-   });
-  
-   res.cookie("accessToken", accessToken, {
-     ...cookieOptions,
-     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-   });
-   res.cookie("refreshToken", refreshToken, {
-     ...cookieOptions,
-     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-   });
-   
-   res.status(200).json(
-     new ApiResponse(
-       200,
-       {
-         user: userWithoutPassword,
-         accessToken,
-         refreshToken,
-       },
-       "User logged in successfully"
-     )
-   );
- } catch (error) {
+
+    const { password: _, createdAt, updatedAt, ...userWithoutPassword } = user[0];
+
+
+    const accessToken = generateAccessToken(userWithoutPassword);
+    const refreshToken = generateRefreshToken(userWithoutPassword);
+
+    // store refresh token in the database with expiration time
+    await db.insert(refreshTokens).values({
+      token: refreshToken,
+      userId: user[0].userId,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+    });
+
+    res.cookie("accessToken", accessToken, {
+      ...cookieOptions,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    });
+    res.cookie("refreshToken", refreshToken, {
+      ...cookieOptions,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          user: userWithoutPassword,
+          accessToken,
+          refreshToken,
+        },
+        "User logged in successfully"
+      )
+    );
+  } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({
         success: false,
@@ -186,7 +186,7 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
   // clear access and refresh token cookies
   // send response
   const refreshToken = req.cookies?.refreshToken;
-  if(!refreshToken){
+  if (!refreshToken) {
     throw new ApiError(400, "Refresh token is missing");
   }
 
@@ -222,9 +222,8 @@ const refreshAccessToken = asyncHandler(async (req: Request, res: Response) => {
       .select()
       .from(refreshTokens)
       .where(
-        sql`${refreshTokens.token} = ${refreshToken} AND ${
-          refreshTokens.expiresAt
-        } > ${new Date()}`
+        sql`${refreshTokens.token} = ${refreshToken} AND ${refreshTokens.expiresAt
+          } > ${new Date()}`
       )
       .limit(1);
 
@@ -257,14 +256,14 @@ const refreshAccessToken = asyncHandler(async (req: Request, res: Response) => {
     }); // 7 days
 
     res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { accessToken: newAccessToken, refreshToken: newRefreshToken },
-        "Access token refreshed successfully"
-      )
-    );
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { accessToken: newAccessToken, refreshToken: newRefreshToken },
+          "Access token refreshed successfully"
+        )
+      );
   } catch (error) {
     if (error instanceof ApiError) {
       res.status(error.statusCode).json({
@@ -298,7 +297,7 @@ const changePassword = asyncHandler(async (req: Request, res: Response) => {
       .where(eq(users.userId, userId))
       .limit(1);
 
-    if(user.length === 0) {
+    if (user.length === 0) {
       throw new ApiError(404, "User not found");
     }
 
@@ -323,7 +322,7 @@ const changePassword = asyncHandler(async (req: Request, res: Response) => {
       throw error;
     }
     throw new ApiError(500, "An error occurred while changing the password");
-    
+
   }
 });
 
@@ -337,7 +336,7 @@ const googleAuthController = {
     );
   },
 
-  googleCallback: asyncHandler(async (req: Request, res: Response) : Promise<void> => {
+  googleCallback: asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { code } = req.query;
 
     if (!code) {
@@ -354,4 +353,43 @@ const googleAuthController = {
   }),
 };
 
-export { registerUser, loginUser, refreshAccessToken, logoutUser,changePassword, googleAuthController};
+const getUsers = asyncHandler(async (req: Request, res: Response) => {
+  // get user details from frontend
+  // validation - not empty
+  // find the user
+  // password check
+  // access and refresh token generation
+  // send cookies
+  // send response
+  try {
+    // find the user
+    const allUsers: User[] = await db
+      .select()
+      .from(users)
+
+    // console.log("All users retrieved:", allUsers);
+
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          user: allUsers,
+        },
+        "Users retrieved successfully"
+      )
+    );
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({
+        success: false,
+        message: error.errors[0].message,
+      });
+    }
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(500, "An error occurred while fetching users");
+  }
+});
+
+export { registerUser, loginUser, refreshAccessToken, logoutUser, changePassword, googleAuthController, getUsers };

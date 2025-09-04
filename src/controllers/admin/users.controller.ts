@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { AdminWithoutPassword } from "../../@types/admin.types";
 import { and, desc, eq, sql, count, inArray } from "drizzle-orm";
-import { assignmentSubmissions, courses, examAttempts, exams, modules, months, orderItems, orders, userProfiles, users, years } from "../../models";
+import { videoAnalytics, assignmentSubmissions, courses, examAttempts, exams, modules, months, orderItems, orders, userProfiles, users, years } from "../../models";
 import db from "../../db/db_connect";
 import { getUserParamsSchema, getUsersQuerySchema } from "../../schemas/adminSchema";
 import asyncHandler from "../../utils/asyncHandler";
@@ -17,7 +17,7 @@ const getUsersBasicDetails = asyncHandler(async (req: AdminRequest, res: Respons
     const offset = (Number(page) - 1) * Number(limit);
 
     const whereConditions = [];
-    
+
     if (search && typeof search === 'string') {
       whereConditions.push(
         sql`(
@@ -28,9 +28,9 @@ const getUsersBasicDetails = asyncHandler(async (req: AdminRequest, res: Respons
       );
     }
 
-     const getSortColumn = (sortBy: string, sortOrder: string) => {
+    const getSortColumn = (sortBy: string, sortOrder: string) => {
       const isDesc = sortOrder === 'desc';
-      
+
       switch (sortBy) {
         case 'username':
           return isDesc ? desc(users.username) : users.username;
@@ -41,7 +41,7 @@ const getUsersBasicDetails = asyncHandler(async (req: AdminRequest, res: Respons
         case 'updatedAt':
           return isDesc ? desc(users.updatedAt) : users.updatedAt;
         default:
-          return desc(users.createdAt); 
+          return desc(users.createdAt);
       }
     };
 
@@ -67,10 +67,10 @@ const getUsersBasicDetails = asyncHandler(async (req: AdminRequest, res: Respons
       ))
       .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
       .groupBy(
-        users.userId, 
-        users.username, 
-        users.email, 
-        users.createdAt, 
+        users.userId,
+        users.username,
+        users.email,
+        users.createdAt,
         users.updatedAt,
         userProfiles.fullName,
         userProfiles.gender,
@@ -88,20 +88,377 @@ const getUsersBasicDetails = asyncHandler(async (req: AdminRequest, res: Respons
 
     const totalCount = totalCountResult[0]?.count || 0;
 
-    const formattedUsers = usersData.map(user => ({
-      userId: user.userId,
-      username: user.username,
-      email: user.email,
-      fullName: user.fullName || 'Not provided',
-      gender: user.gender || 'Not specified',
-      registeredAt: user.createdAt,
-      lastUpdated: user.updatedAt,
-      profileCompleted: !!user.fullName,
-      totalOrders: user.totalOrders || 0,
-      totalSpent: parseFloat(user.totalSpent || '0'),
-      lastOrderDate: user.lastOrderDate,
-      hasPurchases: (user.totalOrders || 0) > 0
+    const formattedUsers = await Promise.all(usersData.map(async user => {
+      // fetch all succeeded orders for this user
+      const userOrders = await db.query.orders.findMany({
+        where: (orders, { eq }) => eq(orders.userId, user.userId),
+        with: {
+          orderItems: {
+            columns: { itemType: true },
+            with: {
+              course: {
+                columns: { courseId: true, courseName: true },
+                with: {
+                  years: {
+                    columns: { yearId: true, yearName: true },
+                    with: {
+                      modules: {
+                        columns: { moduleId: true, moduleName: true },
+                        with: {
+                          months: {
+                            columns: { monthId: true, monthName: true },
+                            with: {
+                              videos: {
+                                columns: {
+                                  videoId: true,
+                                  videoVimeoId: true,
+                                  videoTitle: true,
+                                  videoUrl: true,
+                                  description: true,
+                                  duration: true,
+                                  thumbnailUrl: true
+                                }
+                              },
+                            }
+                          }
+                        }
+                      },
+                      exams: {
+                        columns: {
+                          examId: true,
+                          weekNumber: true,
+                          type: true,
+                          isActive: true,
+                          yearId: true
+                        }
+                      }
+                    }
+                  },
+                  exams: {
+                    columns: {
+                      examId: true,
+                      weekNumber: true,
+                      type: true,
+                      isActive: true,
+                      yearId: true
+
+                    }
+                  }
+                }
+              },
+              year: {
+                columns: { yearId: true, yearName: true },
+                with: {
+                  modules: {
+                    columns: { moduleId: true, moduleName: true },
+                    with: {
+                      months: {
+                        columns: { monthId: true, monthName: true },
+                        with: {
+                          videos: {
+                            columns: {
+                              videoId: true,
+                              videoVimeoId: true,
+                              videoTitle: true,
+                              videoUrl: true,
+                              description: true,
+                              duration: true,
+                              thumbnailUrl: true
+                            }
+                          },
+                        }
+                      },
+                    }
+                  },
+                  course: { columns: { courseId: true, courseName: true } },
+                  exams: {
+                    columns: {
+                      examId: true,
+                      weekNumber: true,
+                      type: true,
+                      isActive: true,
+                      yearId: true
+
+                    }
+                  }
+                }
+              },
+              module: {
+                columns: { moduleId: true, moduleName: true },
+                with: {
+                  months: {
+                    columns: { monthId: true, monthName: true },
+                    with: {
+                      videos: {
+                        columns: {
+                          videoId: true,
+                          videoVimeoId: true,
+                          videoTitle: true,
+                          videoUrl: true,
+                          description: true,
+                          duration: true,
+                          thumbnailUrl: true
+                        }
+                      },
+                    }
+                  },
+                  year: { columns: { yearId: true, yearName: true } },
+                  course: { columns: { courseId: true, courseName: true } },
+                }
+              },
+              month: {
+                columns: { monthId: true, monthName: true },
+                with: {
+                  videos: {
+                    columns: {
+                      videoId: true,
+                      videoVimeoId: true,
+                      videoTitle: true,
+                      videoUrl: true,
+                      description: true,
+                      duration: true,
+                      thumbnailUrl: true
+                    }
+                  },
+                  module: { columns: { moduleId: true, moduleName: true } },
+                  year: { columns: { yearId: true, yearName: true } },
+                  course: { columns: { courseId: true, courseName: true } }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // build purchasedDetails for this user
+      const purchasedDetails: { [key: string]: any } = {};
+
+      userOrders.forEach(order => {
+        order.orderItems.forEach(item => {
+          switch (item.itemType) {
+            case "Course": {
+              const course = item.course;
+              if (course) {
+                const courseData = {
+                  courseName: course.courseName,
+                  courseId: course.courseId,
+                  years: course.years.map((year: any) => ({
+                    yearId: year.yearId,
+                    yearName: year.yearName,
+                    modules: year.modules.map((module: any) => ({
+                      moduleId: module.moduleId,
+                      moduleName: module.moduleName,
+                      months: module.months.map((month: any) => ({
+                        monthId: month.monthId,
+                        monthName: month.monthName,
+                        videos: month.videos,
+                        exams: month.exams,
+                      })),
+                      exams: module.exams
+                    })),
+                    exams: year.exams
+                  })),
+                  exams: course.exams
+                };
+
+                purchasedDetails[course.courseId] = courseData;
+              }
+              break;
+            }
+            case "Year": {
+              const year = item.year
+              if (item.year && item.year.course) {
+                const courseId = item.year.course.courseId;
+                if (!purchasedDetails[courseId]) {
+                  purchasedDetails[courseId] = {
+                    courseName: item.year.course.courseName,
+                    years: []
+                  };
+                }
+
+                const yearData = {
+                  yearId: item.year.yearId,
+                  courseId: courseId,
+                  yearName: item.year.yearName,
+                  modules: item.year.modules.map((module: any) => ({
+                    moduleId: module.moduleId,
+                    moduleName: module.moduleName,
+                    months: module.months.map((month: any) => ({
+                      monthId: month.monthId,
+                      monthName: month.monthName,
+                      videos: month.videos.map((video: any) => ({
+                        videoId: video.videoId,
+                        videoVimeoId: video.videoVimeoId,
+                        videoTitle: video.videoTitle,
+                        videoUrl: video.videoUrl,
+                        description: video.description,
+                        duration: video.duration,
+                        thumbnailUrl: video.thumbnailUrl
+                      }))
+                    }))
+                  }))
+                };
+
+                const existingYearIndex = purchasedDetails[courseId].years.findIndex(
+                  (y: any) => y.yearId === item.year?.yearId
+                );
+                if (existingYearIndex === -1) {
+                  purchasedDetails[courseId].years.push(yearData);
+                } else {
+                  purchasedDetails[courseId].years[existingYearIndex] = yearData;
+                }
+              }
+              break;
+            }
+            case "Module": {
+              const modules = item.module
+              if (item.module && item.module.course && item.module.year) {
+                const courseId = item.module.course.courseId;
+                if (!purchasedDetails[courseId]) {
+                  purchasedDetails[courseId] = {
+                    courseName: item.module.course.courseName,
+                    years: []
+                  };
+                }
+
+                let yearIndex = purchasedDetails[courseId].years.findIndex(
+                  (y: any) => y.yearId === item.module?.year.yearId
+                );
+
+                if (yearIndex === -1) {
+                  purchasedDetails[courseId].years.push({
+                    yearId: item.module.year.yearId,
+                    yearName: item.module.year.yearName,
+                    modules: []
+                  });
+                  yearIndex = purchasedDetails[courseId].years.length - 1;
+                }
+
+                const moduleData = {
+                  moduleId: item.module.moduleId,
+                  courseId: courseId,
+                  yearId: item.module?.year.yearId,
+                  moduleName: item.module.moduleName,
+                  months: item.module.months.map((month: any) => ({
+                    monthId: month.monthId,
+                    monthName: month.monthName,
+                    videos: month.videos.map((video: any) => ({
+                      videoId: video.videoId,
+                      videoVimeoId: video.videoVimeoId,
+                      videoTitle: video.videoTitle,
+                      videoUrl: video.videoUrl,
+                      description: video.description,
+                      duration: video.duration,
+                      thumbnailUrl: video.thumbnailUrl
+                    }))
+                  }))
+                };
+
+                const existingModuleIndex = purchasedDetails[courseId].years[yearIndex].modules.findIndex(
+                  (m: any) => m.moduleId === item.module?.moduleId
+                );
+                if (existingModuleIndex === -1) {
+                  purchasedDetails[courseId].years[yearIndex].modules.push(moduleData);
+                } else {
+                  purchasedDetails[courseId].years[yearIndex].modules[existingModuleIndex] = moduleData;
+                }
+              }
+              break;
+            }
+            case "Month": {
+              const month = item.month
+              if (item.month && item.month.course && item.month.year && item.month.module) {
+                const courseId = item.month.course.courseId;
+                if (!purchasedDetails[courseId]) {
+                  purchasedDetails[courseId] = {
+                    courseName: item.month.course.courseName,
+                    years: []
+                  };
+                }
+
+                let yearIndex = purchasedDetails[courseId].years.findIndex(
+                  (y: any) => y.yearId === item.month?.year.yearId
+                );
+
+                if (yearIndex === -1) {
+                  purchasedDetails[courseId].years.push({
+                    yearId: item.month.year.yearId,
+                    yearName: item.month.year.yearName,
+                    modules: []
+                  });
+                  yearIndex = purchasedDetails[courseId].years.length - 1;
+                }
+
+                let moduleIndex = purchasedDetails[courseId].years[yearIndex].modules.findIndex(
+                  (m: any) => m.moduleId === item.month?.module.moduleId
+                );
+
+                if (moduleIndex === -1) {
+                  purchasedDetails[courseId].years[yearIndex].modules.push({
+                    moduleId: item.month.module.moduleId,
+                    moduleName: item.month.module.moduleName,
+                    months: []
+                  });
+                  moduleIndex = purchasedDetails[courseId].years[yearIndex].modules.length - 1;
+                }
+
+                const monthData = {
+                  monthId: item.month.monthId,
+                  courseId: courseId,
+                  yearId: item.month?.year.yearId,
+                  monthName: item.month.monthName,
+                  videos: item.month.videos.map((video: any) => ({
+                    videoId: video.videoId,
+                    videoVimeoId: video.videoVimeoId,
+                    videoTitle: video.videoTitle,
+                    videoUrl: video.videoUrl,
+                    description: video.description,
+                    duration: video.duration,
+                    thumbnailUrl: video.thumbnailUrl
+                  }))
+                };
+
+                const existingMonthIndex = purchasedDetails[courseId].years[yearIndex].modules[moduleIndex].months.findIndex(
+                  (m: any) => m.monthId === item.month?.monthId
+                );
+                if (existingMonthIndex === -1) {
+                  purchasedDetails[courseId].years[yearIndex].modules[moduleIndex].months.push(monthData);
+                } else {
+                  purchasedDetails[courseId].years[yearIndex].modules[moduleIndex].months[existingMonthIndex] = monthData;
+                }
+              }
+              break;
+            }
+            default:
+              console.warn("Unknown item type:", item.itemType);
+          }
+        });
+      });
+
+      let analytics = await db
+        .select()
+        .from(videoAnalytics)
+        .where(eq(videoAnalytics.userId, Number(user.userId)));
+
+
+      return {
+        userId: user.userId,
+        username: user.username,
+        email: user.email,
+        fullName: user.fullName || 'Not provided',
+        gender: user.gender || 'Not specified',
+        registeredAt: user.createdAt,
+        lastUpdated: user.updatedAt,
+        profileCompleted: !!user.fullName,
+        totalOrders: user.totalOrders || 0,
+        totalSpent: parseFloat(user.totalSpent || '0'),
+        lastOrderDate: user.lastOrderDate,
+        hasPurchases: (user.totalOrders || 0) > 0,
+        purchasedDetails, // ✅ attached here
+        analytics: analytics.length > 0 ? analytics : []
+      };
     }));
+
 
     res.status(200).json({
       success: true,
@@ -128,7 +485,7 @@ const getUsersBasicDetails = asyncHandler(async (req: AdminRequest, res: Respons
   }
 });
 
-const getUserSpecificDetails = asyncHandler (async (req: AdminRequest, res: Response): Promise<void> => {
+const getUserSpecificDetails = asyncHandler(async (req: AdminRequest, res: Response): Promise<void> => {
   try {
     const { userId } = getUserParamsSchema.parse(req.params);
     const userIdNum = Number(userId);
@@ -168,63 +525,63 @@ const getUserSpecificDetails = asyncHandler (async (req: AdminRequest, res: Resp
         and(eq(orders.userId, userIdNum), eq(orders.paymentStatus, 'succeeded'))
       );
 
-    const coursesPurchased  = items.filter(i => i.itemType.toLowerCase() === 'course').map(i => i.itemName);
-    const yearsPurchased    = items.filter(i => i.itemType.toLowerCase() === 'year').map(i => i.itemName);
-    const modulesPurchased  = items.filter(i => i.itemType.toLowerCase() === 'module').map(i => i.itemName);
-    const monthsPurchased   = items.filter(i => i.itemType.toLowerCase() === 'month').map(i => i.itemName);
+    const coursesPurchased = items.filter(i => i.itemType.toLowerCase() === 'course').map(i => i.itemName);
+    const yearsPurchased = items.filter(i => i.itemType.toLowerCase() === 'year').map(i => i.itemName);
+    const modulesPurchased = items.filter(i => i.itemType.toLowerCase() === 'module').map(i => i.itemName);
+    const monthsPurchased = items.filter(i => i.itemType.toLowerCase() === 'month').map(i => i.itemName);
 
-    const courseRows  = coursesPurchased.length
+    const courseRows = coursesPurchased.length
       ? await db.select({ courseId: courses.courseId, courseName: courses.courseName })
-               .from(courses)
-               .where(inArray(courses.courseName, coursesPurchased))
+        .from(courses)
+        .where(inArray(courses.courseName, coursesPurchased))
       : [];
 
-    const yearRows    = yearsPurchased.length
+    const yearRows = yearsPurchased.length
       ? await db
-          .select({
-            courseId: courses.courseId,
-            courseName: courses.courseName,
-            yearId: years.yearId,
-            yearName: years.yearName
-          })
-          .from(years)
-          .innerJoin(courses, eq(years.courseId, courses.courseId))
-          .where(inArray(years.yearName, yearsPurchased))
+        .select({
+          courseId: courses.courseId,
+          courseName: courses.courseName,
+          yearId: years.yearId,
+          yearName: years.yearName
+        })
+        .from(years)
+        .innerJoin(courses, eq(years.courseId, courses.courseId))
+        .where(inArray(years.yearName, yearsPurchased))
       : [];
 
-    const moduleRows  = modulesPurchased.length
+    const moduleRows = modulesPurchased.length
       ? await db
-          .select({
-            courseId: courses.courseId,
-            courseName: courses.courseName,
-            yearId: years.yearId,
-            yearName: years.yearName,
-            moduleId: modules.moduleId,
-            moduleName: modules.moduleName
-          })
-          .from(modules)
-          .innerJoin(years, eq(modules.yearId, years.yearId))
-          .innerJoin(courses, eq(modules.courseId, courses.courseId))
-          .where(inArray(modules.moduleName, modulesPurchased))
+        .select({
+          courseId: courses.courseId,
+          courseName: courses.courseName,
+          yearId: years.yearId,
+          yearName: years.yearName,
+          moduleId: modules.moduleId,
+          moduleName: modules.moduleName
+        })
+        .from(modules)
+        .innerJoin(years, eq(modules.yearId, years.yearId))
+        .innerJoin(courses, eq(modules.courseId, courses.courseId))
+        .where(inArray(modules.moduleName, modulesPurchased))
       : [];
 
-    const monthRows   = monthsPurchased.length
+    const monthRows = monthsPurchased.length
       ? await db
-          .select({
-            courseId: courses.courseId,
-            courseName: courses.courseName,
-            yearId: years.yearId,
-            yearName: years.yearName,
-            moduleId: modules.moduleId,
-            moduleName: modules.moduleName,
-            monthId: months.monthId,
-            monthName: months.monthName
-          })
-          .from(months)
-          .innerJoin(modules, eq(months.moduleId, modules.moduleId))
-          .innerJoin(years,   eq(months.yearId, years.yearId))
-          .innerJoin(courses, eq(months.courseId, courses.courseId))
-          .where(inArray(months.monthName, monthsPurchased))
+        .select({
+          courseId: courses.courseId,
+          courseName: courses.courseName,
+          yearId: years.yearId,
+          yearName: years.yearName,
+          moduleId: modules.moduleId,
+          moduleName: modules.moduleName,
+          monthId: months.monthId,
+          monthName: months.monthName
+        })
+        .from(months)
+        .innerJoin(modules, eq(months.moduleId, modules.moduleId))
+        .innerJoin(years, eq(months.yearId, years.yearId))
+        .innerJoin(courses, eq(months.courseId, courses.courseId))
+        .where(inArray(months.monthName, monthsPurchased))
       : [];
 
     const bought = [
@@ -300,7 +657,7 @@ const getUserSpecificDetails = asyncHandler (async (req: AdminRequest, res: Resp
 
     const enhancedExamAttempts = examAttemptsData.map(attempt => {
       const assignment = assignmentMap[attempt.examId];
-      
+
       return {
         attemptId: attempt.attemptId,
         examId: attempt.examId,
@@ -366,6 +723,6 @@ const getUserSpecificDetails = asyncHandler (async (req: AdminRequest, res: Resp
 });
 
 export {
-    getUserSpecificDetails,
-    getUsersBasicDetails
+  getUserSpecificDetails,
+  getUsersBasicDetails
 }
