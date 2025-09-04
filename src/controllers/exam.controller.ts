@@ -8,23 +8,26 @@ import ApiResponse from "../utils/ApiResponse";
 import asyncHandler from "../utils/asyncHandler";
 import { UserWithoutPassword } from "../@types/types";
 import { resolveMultipleOrderItems } from '../utils/orderHelpers';
+import { videoAnalyticsSchema } from "../schemas/videoAnalyticsSchema";
+import { videoAnalytics, VideoAnalytics, NewVideoAnalytics } from "../models/videoAnalytics.model";
 
-import { 
-  exams as examsTable, 
+
+import {
+  exams as examsTable,
   mcqQuestions,
-  mcqOptions, 
+  mcqOptions,
   examAttempts,
   assignmentSubmissions,
   courses,
-  years, 
+  years,
   orders
 } from "../models";
 
-import { 
-  getExamSchema, 
-  submitMcqSchema, 
-  submitAssignmentSchema, 
-  submitFinalExamSchema   
+import {
+  getExamSchema,
+  submitMcqSchema,
+  submitAssignmentSchema,
+  submitFinalExamSchema
 } from "../schemas/examSchema";
 
 import {
@@ -64,21 +67,21 @@ const getExam = asyncHandler(async (req: Request, res: Response, next: NextFunct
 
     const exam = examResults[0];
 
-    const courseResults = await db.select({ 
+    const courseResults = await db.select({
       courseId: courses.courseId,
-      courseName: courses.courseName 
+      courseName: courses.courseName
     })
-    .from(courses)
-    .where(eq(courses.courseId, courseId))
-    .limit(1);
+      .from(courses)
+      .where(eq(courses.courseId, courseId))
+      .limit(1);
 
-    const yearResults = await db.select({ 
+    const yearResults = await db.select({
       yearId: years.yearId,
-      yearName: years.yearName 
+      yearName: years.yearName
     })
-    .from(years)
-    .where(eq(years.yearId, yearId))
-    .limit(1);
+      .from(years)
+      .where(eq(years.yearId, yearId))
+      .limit(1);
 
     const attemptsResults = await db.select()
       .from(examAttempts)
@@ -87,7 +90,7 @@ const getExam = asyncHandler(async (req: Request, res: Response, next: NextFunct
         eq(examAttempts.userId, userId)
       ))
       .orderBy(examAttempts.submittedAt);
-      
+
     const isUnlocked = await checkExamUnlocked(userId, exam.examId);
     if (!isUnlocked) {
       throw new ApiError(423, 'This exam is locked. Complete previous requirements first.');
@@ -126,20 +129,20 @@ const getExam = asyncHandler(async (req: Request, res: Response, next: NextFunct
         const assignmentQuestions = await getAssignmentQuestions(exam.examId);
         response.assignmentPrompt = exam.description;
         response.questions = assignmentQuestions;
-        response.canResubmit = attemptsResults.length === 0 || 
-                              (attemptsResults.length > 0 && 
-                               attemptsResults[attemptsResults.length - 1].gradedAt && 
-                               !attemptsResults[attemptsResults.length - 1].passed);
+        response.canResubmit = attemptsResults.length === 0 ||
+          (attemptsResults.length > 0 &&
+            attemptsResults[attemptsResults.length - 1].gradedAt &&
+            !attemptsResults[attemptsResults.length - 1].passed);
         break;
 
       case 'final':
         const finalExamSections = await getFinalExamSections(exam.examId);
         response.sections = finalExamSections;
-        response.submissionType = 'link'; 
-        response.canResubmit = attemptsResults.length === 0 || 
-                              (attemptsResults.length > 0 && 
-                               attemptsResults[attemptsResults.length - 1].gradedAt && 
-                               !attemptsResults[attemptsResults.length - 1].passed);
+        response.submissionType = 'link';
+        response.canResubmit = attemptsResults.length === 0 ||
+          (attemptsResults.length > 0 &&
+            attemptsResults[attemptsResults.length - 1].gradedAt &&
+            !attemptsResults[attemptsResults.length - 1].passed);
         break;
     }
 
@@ -170,9 +173,9 @@ async function getMcqQuestions(examId: number) {
       optionText: mcqOptions.optionText,
       optionOrder: mcqOptions.optionOrder
     })
-    .from(mcqOptions)
-    .where(eq(mcqOptions.questionId, question.questionId))
-    .orderBy(mcqOptions.optionOrder);
+      .from(mcqOptions)
+      .where(eq(mcqOptions.questionId, question.questionId))
+      .orderBy(mcqOptions.optionOrder);
 
     questions.push({
       questionId: question.questionId,
@@ -223,7 +226,7 @@ const getCourseExams = asyncHandler(async (req: Request, res: Response, next: Ne
 
       const isUnlocked = await checkExamUnlocked(userId, exam.examId);
       const latestAttempt = attemptsResults.length > 0 ? attemptsResults[attemptsResults.length - 1] : null;
-      
+
       return {
         examId: exam.examId,
         weekNumber: exam.weekNumber,
@@ -255,7 +258,7 @@ const getCourseExams = asyncHandler(async (req: Request, res: Response, next: Ne
 
 async function checkUserAccess(userId: number, courseId: number, yearId: number): Promise<boolean> {
   try {
-    
+
     const userOrders = await db.select()
       .from(orders)
       .where(eq(orders.userId, userId));
@@ -278,15 +281,15 @@ async function checkUserAccess(userId: number, courseId: number, yearId: number)
     const resolvedItems = await resolveMultipleOrderItems(allOrderItems);
 
     const hasAccess = resolvedItems.some(item => {
-      
+
       if (item.courseId === courseId) {
         return true;
       }
-      
+
       if (item.yearId === yearId) {
         return true;
       }
-      
+
       return false;
     });
 
@@ -295,23 +298,23 @@ async function checkUserAccess(userId: number, courseId: number, yearId: number)
         .from(years)
         .where(eq(years.yearId, yearId))
         .limit(1);
-      
+
       if (yearCourseResult.length > 0) {
         const yearCourseId = yearCourseResult[0].courseId;
-        
+
         const hasCourseAccess = resolvedItems.some(item => {
           if (item.courseId === yearCourseId) {
             return true;
           }
           return false;
         });
-        
+
         if (hasCourseAccess) {
           return true;
         }
       }
     }
-    
+
     return hasAccess;
   } catch (error) {
     return false;
@@ -411,19 +414,19 @@ const submitMcqExam = asyncHandler(async (req: Request, res: Response, next: Nex
 
       const [updatedAttempt] = await db.update(examAttempts)
         .set({
-          attemptNumber: currentAttemptNumber, 
+          attemptNumber: currentAttemptNumber,
           submittedAt: new Date(),
-          passed: false, 
+          passed: false,
           gradedAt: null,
           gradedBy: null
         })
         .where(eq(examAttempts.attemptId, existingAttempt[0].attemptId))
         .returning();
-      
+
       attempt = updatedAttempt;
     } else {
       currentAttemptNumber = 1;
-      
+
       const [newAttempt] = await db.insert(examAttempts)
         .values({
           examId,
@@ -432,14 +435,14 @@ const submitMcqExam = asyncHandler(async (req: Request, res: Response, next: Nex
           submittedAt: new Date()
         })
         .returning();
-      
+
       attempt = newAttempt;
     }
 
 
     const questionIds = examQuestions.map(q => q.questionId);
     const submittedQuestionIds = responses.map(r => r.questionId);
-    
+
     for (const submittedId of submittedQuestionIds) {
       if (!questionIds.includes(submittedId)) {
         throw new ApiError(400, `Question ID ${submittedId} does not exist for this exam`);
@@ -474,7 +477,7 @@ const submitMcqExam = asyncHandler(async (req: Request, res: Response, next: Nex
       .where(eq(examAttempts.attemptId, attempt.attemptId));
 
     const remainingAttempts = passed ? 0 : Math.max(0, 3 - currentAttemptNumber);
-    
+
     let message = '';
     if (passed) {
       message = `Congratulations! You passed with ${percentage}% (${correctAnswers}/${totalQuestionsInDB} correct)`;
@@ -490,7 +493,7 @@ const submitMcqExam = asyncHandler(async (req: Request, res: Response, next: Nex
       new ApiResponse(200, {
         attemptId: attempt.attemptId,
         examId,
-        attemptNumber: currentAttemptNumber, 
+        attemptNumber: currentAttemptNumber,
         totalQuestionsInExam: totalQuestionsInDB,
         questionsAnswered: responses.length,
         correctAnswers,
@@ -508,7 +511,7 @@ const submitMcqExam = asyncHandler(async (req: Request, res: Response, next: Nex
 
   } catch (error) {
     console.error('MCQ submission error:', error);
-    
+
     if (error instanceof z.ZodError) {
       throw new ApiError(400, error.errors[0].message);
     }
@@ -569,6 +572,319 @@ const submitAssignmentExam = asyncHandler(async (req: Request, res: Response, ne
         eq(examAttempts.examId, examId)
       ));
 
+    let analytics: VideoAnalytics[] = []
+    if (existingAttempts.length <= 0) {
+      const exam = await db.select().from(examsTable).where(eq(examsTable.examId, examId)).limit(1)
+
+      const courseId = exam[0].courseId
+      const yearId = exam[0].yearId
+
+      const userOrders = await db.query.orders.findMany({
+        where: (orders, { eq }) => eq(orders.userId, userId),
+        with: {
+          orderItems: {
+            columns: { itemType: true },
+            with: {
+              course: {
+                columns: { courseId: true, courseName: true },
+                with: {
+                  years: {
+                    columns: { yearId: true, yearName: true },
+                    with: {
+                      modules: {
+                        columns: { moduleId: true, moduleName: true },
+                        with: {
+                          months: {
+                            columns: { monthId: true, monthName: true },
+                            with: {
+                              videos: {
+                                columns: {
+                                  videoId: true,
+                                  videoVimeoId: true,
+                                  videoTitle: true,
+                                  videoUrl: true,
+                                  description: true,
+                                  duration: true,
+                                  thumbnailUrl: true
+                                }
+                              },
+                            }
+                          }
+                        }
+                      },
+                      exams: {
+                        columns: {
+                          examId: true,
+                          weekNumber: true,
+                          type: true,
+                          isActive: true,
+                          yearId: true
+                        }
+                      }
+                    }
+                  },
+                  exams: {
+                    columns: {
+                      examId: true,
+                      weekNumber: true,
+                      type: true,
+                      isActive: true,
+                      yearId: true
+
+                    }
+                  }
+                }
+              },
+              year: {
+                columns: { yearId: true, yearName: true },
+                with: {
+                  modules: {
+                    columns: { moduleId: true, moduleName: true },
+                    with: {
+                      months: {
+                        columns: { monthId: true, monthName: true },
+                        with: {
+                          videos: {
+                            columns: {
+                              videoId: true,
+                              videoVimeoId: true,
+                              videoTitle: true,
+                              videoUrl: true,
+                              description: true,
+                              duration: true,
+                              thumbnailUrl: true
+                            }
+                          },
+                        }
+                      },
+                    }
+                  },
+                  course: { columns: { courseId: true, courseName: true } },
+                  exams: {
+                    columns: {
+                      examId: true,
+                      weekNumber: true,
+                      type: true,
+                      isActive: true,
+                      yearId: true
+
+                    }
+                  }
+                }
+              },
+              module: {
+                columns: { moduleId: true, moduleName: true },
+                with: {
+                  months: {
+                    columns: { monthId: true, monthName: true },
+                    with: {
+                      videos: {
+                        columns: {
+                          videoId: true,
+                          videoVimeoId: true,
+                          videoTitle: true,
+                          videoUrl: true,
+                          description: true,
+                          duration: true,
+                          thumbnailUrl: true
+                        }
+                      },
+                    }
+                  },
+                  year: { columns: { yearId: true, yearName: true } },
+                  course: { columns: { courseId: true, courseName: true } },
+                }
+              },
+              month: {
+                columns: { monthId: true, monthName: true },
+                with: {
+                  videos: {
+                    columns: {
+                      videoId: true,
+                      videoVimeoId: true,
+                      videoTitle: true,
+                      videoUrl: true,
+                      description: true,
+                      duration: true,
+                      thumbnailUrl: true
+                    }
+                  },
+                  module: { columns: { moduleId: true, moduleName: true } },
+                  year: { columns: { yearId: true, yearName: true } },
+                  course: { columns: { courseId: true, courseName: true } }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // existing logic to build purchasedDetails and startingVideos
+      const purchasedDetails: { [key: string]: any } = {};
+
+      function getStartingVideo(item: any, type: string) {
+        const findWeekOneVideo = (videos: any[]) => {
+          if (!videos || videos.length === 0) return null;
+          const weekOne = videos.find((v) =>
+            v.videoTitle?.toLowerCase().includes("week 1")
+          );
+          return weekOne || videos[0];
+        };
+
+        if (type === "Course") {
+          const year = item?.years?.[0];
+          const module = year?.modules?.[0];
+          const month = module?.months?.[0];
+          const video = findWeekOneVideo(month?.videos || []);
+          return video ? { courseId: item.courseId, moduleId: module.moduleId, monthId: month.monthId, video } : null;
+        }
+
+        if (type === "Year") {
+          const module = item?.modules?.[0];
+          const month = module?.months?.[0];
+          const video = findWeekOneVideo(month?.videos || []);
+          return video ? { courseId: item.course.courseId, moduleId: module.moduleId, monthId: month.monthId, video } : null;
+        }
+
+        if (type === "Module") {
+          const month = item?.months?.[0];
+          const video = findWeekOneVideo(month?.videos || []);
+          return video ? { courseId: item.course.courseId, moduleId: item.moduleId, monthId: month.monthId, video } : null;
+        }
+
+        if (type === "Month") {
+          const video = findWeekOneVideo(item?.videos || []);
+          return video ? { courseId: item.course.courseId, moduleId: item.module.moduleId, monthId: item.monthId, video } : null;
+        }
+
+        return null;
+      }
+
+      const startingVideos: any[] = [];
+
+      // iterate over orders and orderItems
+      userOrders.forEach(order => {
+        order.orderItems.forEach(item => {
+          const addExams = (obj: any, exams: any[]) => {
+            if (exams?.length) obj.exams = exams.map(e => ({
+              examId: e.examId,
+              examName: e.examName,
+              totalMarks: e.totalMarks,
+              passingMarks: e.passingMarks
+            }));
+          };
+
+          switch (item.itemType) {
+            case "Course":
+              const course = item.course;
+              if (course) {
+                const courseData = {
+                  courseName: course.courseName,
+                  years: course.years.map((year: any) => ({
+                    yearId: year.yearId,
+                    yearName: year.yearName,
+                    modules: year.modules.map((module: any) => ({
+                      moduleId: module.moduleId,
+                      moduleName: module.moduleName,
+                      months: module.months.map((month: any) => ({
+                        monthId: month.monthId,
+                        monthName: month.monthName,
+                        videos: month.videos,
+                        exams: month.exams,
+                      })),
+                      exams: module.exams
+                    })),
+                    exams: year.exams
+                  })),
+                  exams: course.exams
+                };
+
+                purchasedDetails[course.courseId] = courseData;
+                const startVid = getStartingVideo(course, "Course");
+                if (startVid) startingVideos.push(startVid);
+              }
+              break;
+            case "Year":
+            case "Module":
+            case "Month":
+              // same pattern: build hierarchy and attach exams at each level
+              // ... you can replicate the same mapping logic and attach exams like above
+              break;
+
+            default:
+              console.warn("Unknown item type:", item.itemType);
+          }
+        });
+      });
+
+      var allVideos: any[] = []
+      const yearDetails = purchasedDetails[courseId].years.find((y: any) => y.yearId == yearId)
+      yearDetails.modules.map((module: any) => {
+        module.months.map((month: any) => {
+          month.videos.map((video: any) => {
+            allVideos.push(video)
+          })
+        })
+      })
+
+      function getWeekNumberFromTitle(title: string): number | null {
+        const match = title.match(/\d+/); // extract first number
+        return match ? parseInt(match[0], 10) : null;
+      }
+
+      function findNextVideoAfterExam(videos: any[], exam: any): any | null {
+        const examWeek = exam.weekNumber;
+        const nextWeek = examWeek + 1;
+
+        // find video whose week number matches nextWeek
+        const nextVideo = videos.find(
+          (v) => getWeekNumberFromTitle(v.videoTitle) === nextWeek
+        );
+
+        return nextVideo || null;
+      }
+
+      const nextVideo = findNextVideoAfterExam(allVideos, exam[0]);
+
+      if (nextVideo) {
+        const existing = await db
+          .select()
+          .from(videoAnalytics)
+          .where(
+            and(eq(videoAnalytics.userId, userId), eq(videoAnalytics.videoId, nextVideo.videoId))
+          )
+          .limit(1);
+
+        if (!existing.length) {
+          const validated = videoAnalyticsSchema.parse({
+            userId,
+            videoId: nextVideo.videoId,
+            videoName: nextVideo.videoTitle,
+            playCount: 0,
+            pauseCount: 0,
+            seekCount: 0,
+            watchedSeconds: 0,
+            totalVideoDuration: Math.round(nextVideo.duration / 60),
+            startDate: new Date(),
+            endDate: new Date(),
+            durationSeconds: nextVideo.duration,
+            watchProgress: 0,
+            fullyWatched: false,
+            isExam: false,
+            examId: null,
+            yearId: yearId,
+            courseId: courseId
+          });
+
+          await db.insert(videoAnalytics).values(validated);
+        }
+      }
+      analytics = await db
+        .select()
+        .from(videoAnalytics)
+        .where(eq(videoAnalytics.userId, Number(userId)));
+    }
+
     const attemptNumber = existingAttempts.length + 1;
 
     const [attempt] = await db.insert(examAttempts)
@@ -598,11 +914,12 @@ const submitAssignmentExam = asyncHandler(async (req: Request, res: Response, ne
       new ApiResponse(200, {
         attemptId: attempt.attemptId,
         examId,
-        attemptNumber, 
+        attemptNumber,
         submissionsCount: submissions.length,
         submittedAt: new Date(),
         status: 'submitted',
-        message: `Assignment submitted successfully (Attempt #${attemptNumber}). Your submission is now awaiting teacher review.`
+        message: `Assignment submitted successfully (Attempt #${attemptNumber}). Your submission is now awaiting teacher review.`,
+        videoAnalytics: analytics
       }, 'Assignment exam submitted successfully')
     );
 
@@ -638,6 +955,150 @@ const submitFinalExam = asyncHandler(async (req: Request, res: Response, next: N
       .where(eq(examsTable.examId, examId))
       .limit(1);
 
+    const relatedExam = await db.query.exams.findFirst({
+      where: (exam, { eq }) => eq(exam.examId, examId),
+      columns: {
+        examId: true,
+        totalMarks: true,
+        title: true,
+        yearId: true // <-- add this
+      },
+      with: {
+        course: {
+          columns: { courseId: true, courseName: true },
+          with: {
+            years: {
+              columns: { yearId: true, yearName: true },
+              with: {
+                modules: {
+                  columns: { moduleId: true, moduleName: true },
+                  with: {
+                    months: {
+                      columns: { monthId: true, monthName: true },
+                      with: {
+                        videos: {
+                          columns: {
+                            videoId: true,
+                            videoTitle: true,
+                            videoUrl: true,
+                            duration: true,
+                            thumbnailUrl: true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const exam = relatedExam; // single exam object from findFirst
+    const examYearId = exam?.yearId; // the year this exam is for
+    const course = exam?.course;
+
+    // let nextVideo = null;
+    // let lastYearFlag = false;
+    // let analytics: VideoAnalytics[] = [];
+
+    // if (course?.years?.length) {
+    //   // Sort years to ensure correct order
+    //   const sortedYears = course.years.sort((a, b) => a.yearId - b.yearId);
+
+    //   // Find the index of the exam year
+    //   const examYearIndex = sortedYears.findIndex(year => year.yearId === examYearId);
+
+    //   if (examYearIndex === -1) {
+    //     throw new Error("Exam year not found in course data");
+    //   }
+
+    //   const isLastYear = examYearIndex === sortedYears.length - 1;
+
+    //   if (isLastYear) {
+    //     lastYearFlag = true; // No next video
+    //   } else {
+    //     // Next year after exam
+    //     const nextYear = sortedYears[examYearIndex + 1];
+
+    //     if (nextYear.modules?.length) {
+    //       const firstModule = nextYear.modules[0];
+    //       if (firstModule.months?.length) {
+    //         const firstMonth = firstModule.months[0];
+
+    //         if (firstMonth.videos?.length) {
+    //           // Sort videos by week number extracted from videoTitle
+    //           const getWeekNumber = (title: string) => {
+    //             const match = title.match(/week\s*(\d+)/i);
+    //             return match ? parseInt(match[1], 10) : Infinity; // unknown titles go last
+    //           };
+
+    //           const sortedVideos = firstMonth.videos
+    //             .slice() // copy to avoid mutating original
+    //             .sort((a, b) => getWeekNumber(a.videoTitle) - getWeekNumber(b.videoTitle));
+
+    //           nextVideo = sortedVideos[0] ?? null; // pick week 1 video
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
+
+
+    // console.log({ nextVideo, lastYearFlag });
+
+    // if (nextVideo && !lastYearFlag) {
+    //   const exisitingAnalytics = await db
+    //     .select()
+    //     .from(videoAnalytics)
+    //     .where(eq(videoAnalytics.userId, Number(userId)));
+
+    //   const analyticsExists = exisitingAnalytics.find(va => va.videoId === nextVideo?.videoId);
+
+    //   if (!analyticsExists) {
+    //     const data = {
+    //       userId,
+    //       videoId: nextVideo.videoId,
+    //       videoName: nextVideo.videoTitle,
+    //       playCount: 0,
+    //       pauseCount: 0,
+    //       seekCount: 0,
+    //       watchedSeconds: 0,
+    //       totalVideoDuration: Math.round((nextVideo?.duration ?? 0) / 60),
+    //       startDate: new Date(),
+    //       endDate: new Date(), // will be updated when user actually finishes
+    //       durationSeconds: nextVideo?.duration ?? 0,
+    //       watchProgress: 0,
+    //       fullyWatched: false,
+    //     }
+
+    //     const validated = videoAnalyticsSchema.parse(data);
+
+    //     await db.insert(videoAnalytics).values(validated);
+    //     console.log(`Inserted video ${nextVideo.videoId} for user ${userId}`);
+
+    //     analytics = await db
+    //       .select()
+    //       .from(videoAnalytics)
+    //       .where(eq(videoAnalytics.userId, Number(userId)));
+    //   } else {
+    //     analytics = exisitingAnalytics;
+    //   }
+    // }
+
+
+    // res.status(200).json(
+    //   new ApiResponse(200, {
+    //     videoAnalytics: analytics
+    //   }, 'Final exam submitted successfully')
+    // );
+
+
+    // // throw new ApiError(404, 'Final exam not found');
+
+
     if (!examResults.length || examResults[0].type !== 'final') {
       throw new ApiError(404, 'Final exam not found');
     }
@@ -671,7 +1132,7 @@ const submitFinalExam = asyncHandler(async (req: Request, res: Response, next: N
         linkUrl,
         notes,
         submittedAt: new Date()
-      });
+      })
 
     res.status(200).json(
       new ApiResponse(200, {
@@ -681,7 +1142,8 @@ const submitFinalExam = asyncHandler(async (req: Request, res: Response, next: N
         submittedAt: new Date(),
         status: 'submitted',
         totalMarks: examResults[0].totalMarks,
-        message: 'Final exam submitted successfully. Your submission is now awaiting teacher grading. Note: Re-attempts are not allowed for final exams.'
+        message: 'Final exam submitted successfully. Your submission is now awaiting teacher grading. Note: Re-attempts are not allowed for final exams.',
+        // videoAnalytics: analytics
       }, 'Final exam submitted successfully')
     );
 

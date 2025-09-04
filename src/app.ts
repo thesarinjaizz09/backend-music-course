@@ -7,6 +7,7 @@ import userProfileRouter from './routes/profile.routes';
 import paymentRouter from './routes/payment.routes';
 import adminRoutes from './routes/admin.routes';
 import examRoutes from './routes/exam.routes';
+import analyticsRoute from './routes/analytics.route';
 
 
 const app: Express = express();
@@ -34,5 +35,6 @@ app.use("/api/v1/profiles", userProfileRouter);
 app.use("/api/v1", paymentRouter);
 app.use("/api/v1/admin", adminRoutes);
 app.use('/api/v1/exams', examRoutes);
+app.use('/api/v1/analytics', analyticsRoute);
 
 export default app;

@@ -15,6 +15,7 @@ const verifyJWT = asyncHandler(async (req: Request, res: Response, next: NextFun
     // check if the user exists
     // Attach the user to the request object, excluding sensitive field
     // Call the next middleware
+    // console.log("User verification");
     const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
     if (!token) {
         throw new ApiError(401, "Access token is required");
@@ -34,8 +35,7 @@ const verifyJWT = asyncHandler(async (req: Request, res: Response, next: NextFun
             return next(new ApiError(401, "Invalid Access Token"));
         }
         req.user = { userId: user.userId, username: user.username, email: user.email } as User;
-        
-
+        // console.log("User verified:", req.user);
         next();
     } catch (err) {
         next(new ApiError(403, "Invalid access token"));
