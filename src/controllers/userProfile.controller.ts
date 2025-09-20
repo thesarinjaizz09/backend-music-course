@@ -71,7 +71,7 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
                                 duration: true,
                                 thumbnailUrl: true
                               }
-                            },
+                            }
                           }
                         }
                       }
@@ -81,8 +81,22 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
                         examId: true,
                         weekNumber: true,
                         type: true,
-                        isActive: true,
-                        yearId: true
+                        title: true,
+                        totalMarks: true
+                      },
+                      with: {
+                        attempts: {
+                          columns: {
+                            attemptId: true,
+                            userId: true,
+                            attemptNumber: true,
+                            passed: true,
+                            submittedAt: true,
+                            gradedAt: true,
+                            gradedBy: true
+                          },
+                          where: (attempts, { eq }) => eq(attempts.userId, userId)
+                        }
                       }
                     }
                   }
@@ -92,9 +106,22 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
                     examId: true,
                     weekNumber: true,
                     type: true,
-                    isActive: true,
-                    yearId: true
-
+                    title: true,
+                    totalMarks: true
+                  },
+                  with: {
+                    attempts: {
+                      columns: {
+                        attemptId: true,
+                        userId: true,
+                        attemptNumber: true,
+                        passed: true,
+                        submittedAt: true,
+                        gradedAt: true,
+                        gradedBy: true
+                      },
+                      where: (attempts, { eq }) => eq(attempts.userId, userId)
+                    }
                   }
                 }
               }
@@ -118,9 +145,9 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
                             duration: true,
                             thumbnailUrl: true
                           }
-                        },
+                        }
                       }
-                    },
+                    }
                   }
                 },
                 course: { columns: { courseId: true, courseName: true } },
@@ -129,9 +156,22 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
                     examId: true,
                     weekNumber: true,
                     type: true,
-                    isActive: true,
-                    yearId: true
-
+                    title: true,
+                    totalMarks: true
+                  },
+                  with: {
+                    attempts: {
+                      columns: {
+                        attemptId: true,
+                        userId: true,
+                        attemptNumber: true,
+                        passed: true,
+                        submittedAt: true,
+                        gradedAt: true,
+                        gradedBy: true
+                      },
+                      where: (attempts, { eq }) => eq(attempts.userId, userId)
+                    }
                   }
                 }
               }
@@ -152,7 +192,7 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
                         duration: true,
                         thumbnailUrl: true
                       }
-                    },
+                    }
                   }
                 },
                 year: { columns: { yearId: true, yearName: true } },
@@ -182,6 +222,7 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
         }
       }
     });
+
 
     // existing logic to build purchasedDetails and startingVideos
     const purchasedDetails: { [key: string]: any } = {};
@@ -292,7 +333,7 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
                   })),
                   exams: year.exams
                 })),
-                exams: course.exams
+                exams: course.exams,
               };
 
               purchasedDetails[course.courseId] = courseData;
