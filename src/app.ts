@@ -18,11 +18,11 @@ app.use(cors({
 }));
 
 app.use((req, res, next) => {
-    if(req.originalUrl === '/api/v1/webhook'){
-        next()
-    } else {
-        express.json({ limit: "16kb" })(req, res, next)
-    }
+  if (req.originalUrl.includes('/webhook')) {
+    next();
+  } else {
+    express.json({ limit: '16kb' })(req, res, next);
+  }
 });
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));

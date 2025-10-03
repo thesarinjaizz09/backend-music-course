@@ -47,7 +47,7 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
       where: (orders, { eq }) => eq(orders.userId, userId),
       with: {
         orderItems: {
-          columns: { itemType: true },
+          columns: { itemType: true, itemName: true },
           with: {
             course: {
               columns: { courseId: true, courseName: true },
@@ -229,6 +229,7 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
 
     function getStartingVideo(item: any, type: string) {
       const findWeekOneVideo = (videos: any[]) => {
+        // console.log({ videos })
         if (!videos || videos.length === 0) return null;
         const weekOne = videos.find((v) =>
           v.videoTitle?.toLowerCase().includes("week 1")
@@ -253,13 +254,13 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
       }
 
       if (type === "Year") {
-        const module = item?.modules?.[0];
+        const module = item?.year?.modules?.[0];
         const month = module?.months?.[0];
         const video = findWeekOneVideo(month?.videos || []);
         return video
           ? {
-            courseId: item.course.courseId,
-            yearId: item.yearId,              // ✅ add yearId
+            courseId: item.year.course.courseId,
+            yearId: item.year.yearId,              // ✅ add yearId
             moduleId: module.moduleId,
             monthId: month.monthId,
             video
@@ -268,13 +269,15 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
       }
 
       if (type === "Module") {
-        const month = item?.months?.[0];
+        console.log(item)
+
+        const month = item?.module?.months?.[0];
         const video = findWeekOneVideo(month?.videos || []);
         return video
           ? {
-            courseId: item.course.courseId,
-            yearId: item.year.yearId,         // ✅ bubble up from parent
-            moduleId: item.moduleId,
+            courseId: item.module.course.courseId,
+            yearId: item.module.year.yearId,         // ✅ bubble up from parent
+            moduleId: item.module.moduleId,
             monthId: month.monthId,
             video
           }
@@ -282,13 +285,14 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
       }
 
       if (type === "Month") {
-        const video = findWeekOneVideo(item?.videos || []);
+        // console.log(item)
+        const video = findWeekOneVideo(item?.month.videos || []);
         return video
           ? {
-            courseId: item.course.courseId,
-            yearId: item.year.yearId,         // ✅ bubble up from parent
-            moduleId: item.module.moduleId,
-            monthId: item.monthId,
+            courseId: item.month.course.courseId,
+            yearId: item.month.year.yearId,         // ✅ bubble up from parent
+            moduleId: item.month.module.moduleId,
+            monthId: item.month.monthId,
             video
           }
           : null;
@@ -300,16 +304,240 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
     const startingVideos: any[] = [];
 
     // iterate over orders and orderItems
+    // userOrders.forEach(order => {
+    //   order.orderItems.forEach(item => {
+    //     const addExams = (obj: any, exams: any[]) => {
+    //       if (exams?.length) obj.exams = exams.map(e => ({
+    //         examId: e.examId,
+    //         examName: e.examName,
+    //         totalMarks: e.totalMarks,
+    //         passingMarks: e.passingMarks
+    //       }));
+    //     };
+
+    //     switch (item.itemType) {
+    //       case "Course": {
+    //         const course = item.course;
+    //         if (course) {
+    //           const courseData = {
+    //             courseName: course.courseName,
+    //             years: course.years.map((year: any) => ({
+    //               yearId: year.yearId,
+    //               yearName: year.yearName,
+    //               modules: year.modules.map((module: any) => ({
+    //                 moduleId: module.moduleId,
+    //                 moduleName: module.moduleName,
+    //                 months: module.months.map((month: any) => ({
+    //                   monthId: month.monthId,
+    //                   monthName: month.monthName,
+    //                   videos: month.videos,
+    //                   exams: month.exams,
+    //                 })),
+    //                 exams: module.exams
+    //               })),
+    //               exams: year.exams
+    //             })),
+    //             exams: course.exams,
+    //           };
+
+    //           purchasedDetails[course.courseId] = courseData;
+    //           const startVid = getStartingVideo(course, "Course");
+    //           if (startVid) startingVideos.push(startVid);
+    //         }
+    //         break;
+    //       }
+    //       case "Year": {
+    //         const year = item.year
+    //         if (item.year && item.year.course) {
+    //           const courseId = item.year.course.courseId;
+    //           if (!purchasedDetails[courseId]) {
+    //             purchasedDetails[courseId] = {
+    //               courseName: item.year.course.courseName,
+    //               years: []
+    //             };
+    //           }
+
+    //           const yearData = {
+    //             yearId: item.year.yearId,
+    //             yearName: item.year.yearName,
+    //             modules: item.year.modules.map((module: any) => ({
+    //               moduleId: module.moduleId,
+    //               moduleName: module.moduleName,
+    //               months: module.months.map((month: any) => ({
+    //                 monthId: month.monthId,
+    //                 monthName: month.monthName,
+    //                 videos: month.videos.map((video: any) => ({
+    //                   videoId: video.videoId,
+    //                   videoVimeoId: video.videoVimeoId,
+    //                   videoTitle: video.videoTitle,
+    //                   videoUrl: video.videoUrl,
+    //                   description: video.description,
+    //                   duration: video.duration,
+    //                   thumbnailUrl: video.thumbnailUrl
+    //                 }))
+    //               }))
+    //             }))
+    //           };
+
+    //           const existingYearIndex = purchasedDetails[courseId].years.findIndex(
+    //             (y: any) => y.yearId === item.year?.yearId
+    //           );
+    //           if (existingYearIndex === -1) {
+    //             purchasedDetails[courseId].years.push(yearData);
+    //           } else {
+    //             purchasedDetails[courseId].years[existingYearIndex] = yearData;
+    //           }
+    //           const startVid = getStartingVideo(year, "Year");
+    //           if (startVid) startingVideos.push(startVid);
+    //         }
+    //         break;
+    //       }
+    //       case "Module": {
+    //         const modules = item.module
+    //         if (item.module && item.module.course && item.module.year) {
+    //           const courseId = item.module.course.courseId;
+    //           if (!purchasedDetails[courseId]) {
+    //             purchasedDetails[courseId] = {
+    //               courseName: item.module.course.courseName,
+    //               years: []
+    //             };
+    //           }
+
+    //           let yearIndex = purchasedDetails[courseId].years.findIndex(
+    //             (y: any) => y.yearId === item.module?.year.yearId
+    //           );
+
+    //           if (yearIndex === -1) {
+    //             purchasedDetails[courseId].years.push({
+    //               yearId: item.module.year.yearId,
+    //               yearName: item.module.year.yearName,
+    //               modules: []
+    //             });
+    //             yearIndex = purchasedDetails[courseId].years.length - 1;
+    //           }
+
+    //           const moduleData = {
+    //             moduleId: item.module.moduleId,
+    //             moduleName: item.module.moduleName,
+    //             months: item.module.months.map((month: any) => ({
+    //               monthId: month.monthId,
+    //               monthName: month.monthName,
+    //               videos: month.videos.map((video: any) => ({
+    //                 videoId: video.videoId,
+    //                 videoVimeoId: video.videoVimeoId,
+    //                 videoTitle: video.videoTitle,
+    //                 videoUrl: video.videoUrl,
+    //                 description: video.description,
+    //                 duration: video.duration,
+    //                 thumbnailUrl: video.thumbnailUrl
+    //               }))
+    //             }))
+    //           };
+
+    //           const existingModuleIndex = purchasedDetails[courseId].years[yearIndex].modules.findIndex(
+    //             (m: any) => m.moduleId === item.module?.moduleId
+    //           );
+    //           if (existingModuleIndex === -1) {
+    //             purchasedDetails[courseId].years[yearIndex].modules.push(moduleData);
+    //           } else {
+    //             purchasedDetails[courseId].years[yearIndex].modules[existingModuleIndex] = moduleData;
+    //           }
+    //         }
+    //         const startVid = getStartingVideo(modules, "Module");
+    //         if (startVid) startingVideos.push(startVid);
+    //         break;
+    //       }
+    //       case "Month": {
+    //         const month = item.month
+    //         if (item.month && item.month.course && item.month.year && item.month.module) {
+    //           const courseId = item.month.course.courseId;
+    //           if (!purchasedDetails[courseId]) {
+    //             purchasedDetails[courseId] = {
+    //               courseName: item.month.course.courseName,
+    //               years: []
+    //             };
+    //           }
+
+    //           let yearIndex = purchasedDetails[courseId].years.findIndex(
+    //             (y: any) => y.yearId === item.month?.year.yearId
+    //           );
+
+    //           if (yearIndex === -1) {
+    //             purchasedDetails[courseId].years.push({
+    //               yearId: item.month.year.yearId,
+    //               yearName: item.month.year.yearName,
+    //               modules: []
+    //             });
+    //             yearIndex = purchasedDetails[courseId].years.length - 1;
+    //           }
+
+    //           let moduleIndex = purchasedDetails[courseId].years[yearIndex].modules.findIndex(
+    //             (m: any) => m.moduleId === item.month?.module.moduleId
+    //           );
+
+    //           if (moduleIndex === -1) {
+    //             purchasedDetails[courseId].years[yearIndex].modules.push({
+    //               moduleId: item.month.module.moduleId,
+    //               moduleName: item.month.module.moduleName,
+    //               months: []
+    //             });
+    //             moduleIndex = purchasedDetails[courseId].years[yearIndex].modules.length - 1;
+    //           }
+
+    //           const monthData = {
+    //             monthId: item.month.monthId,
+    //             monthName: item.month.monthName,
+    //             videos: item.month.videos.map((video: any) => ({
+    //               videoId: video.videoId,
+    //               videoVimeoId: video.videoVimeoId,
+    //               videoTitle: video.videoTitle,
+    //               videoUrl: video.videoUrl,
+    //               description: video.description,
+    //               duration: video.duration,
+    //               thumbnailUrl: video.thumbnailUrl
+    //             }))
+    //           };
+
+    //           const existingMonthIndex = purchasedDetails[courseId].years[yearIndex].modules[moduleIndex].months.findIndex(
+    //             (m: any) => m.monthId === item.month?.monthId
+    //           );
+    //           if (existingMonthIndex === -1) {
+    //             purchasedDetails[courseId].years[yearIndex].modules[moduleIndex].months.push(monthData);
+    //           } else {
+    //             purchasedDetails[courseId].years[yearIndex].modules[moduleIndex].months[existingMonthIndex] = monthData;
+    //           }
+    //         }
+    //         const startVid = getStartingVideo(month, "Month");
+    //         if (startVid) startingVideos.push(startVid);
+    //         break;
+    //       }
+    //       default:
+    //         console.warn("Unknown item type:", item.itemType);
+    //     }
+    //   });
+    // });
+
+    function parseItemName(itemName: string) {
+      const res: { yearId?: number; moduleId?: number; monthId?: number } = {};
+
+      const yearMatch = itemName.match(/Year (\d+)/i);
+      if (yearMatch) res.yearId = parseInt(yearMatch[1], 10);
+
+      const moduleMatch = itemName.match(/Module (\d+)/i);
+      if (moduleMatch) res.moduleId = parseInt(moduleMatch[1], 10);
+
+      const monthMatch = itemName.match(/Month (\d+)/i);
+      if (monthMatch) res.monthId = parseInt(monthMatch[1], 10);
+
+      return res;
+    }
+
     userOrders.forEach(order => {
       order.orderItems.forEach(item => {
-        const addExams = (obj: any, exams: any[]) => {
-          if (exams?.length) obj.exams = exams.map(e => ({
-            examId: e.examId,
-            examName: e.examName,
-            totalMarks: e.totalMarks,
-            passingMarks: e.passingMarks
-          }));
-        };
+        const { yearId, moduleId, monthId } = parseItemName(item.itemName || "");
+        // console.log({ monthId })
+        // console.log({ moduleId })
+        // console.log({ yearId })
 
         switch (item.itemType) {
           case "Course": {
@@ -342,171 +570,153 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
             }
             break;
           }
+
           case "Year": {
-            const year = item.year
-            if (item.year && item.year.course) {
-              const courseId = item.year.course.courseId;
-              if (!purchasedDetails[courseId]) {
-                purchasedDetails[courseId] = {
-                  courseName: item.year.course.courseName,
-                  years: []
-                };
-              }
+            if (!item.year || !item.year.course) break;
+            const courseId = item.year.course.courseId;
 
-              const yearData = {
-                yearId: item.year.yearId,
-                yearName: item.year.yearName,
-                modules: item.year.modules.map((module: any) => ({
-                  moduleId: module.moduleId,
-                  moduleName: module.moduleName,
-                  months: module.months.map((month: any) => ({
-                    monthId: month.monthId,
-                    monthName: month.monthName,
-                    videos: month.videos.map((video: any) => ({
-                      videoId: video.videoId,
-                      videoVimeoId: video.videoVimeoId,
-                      videoTitle: video.videoTitle,
-                      videoUrl: video.videoUrl,
-                      description: video.description,
-                      duration: video.duration,
-                      thumbnailUrl: video.thumbnailUrl
-                    }))
-                  }))
-                }))
+            if (!purchasedDetails[courseId]) {
+              purchasedDetails[courseId] = {
+                courseName: item.year.course.courseName,
+                years: [],
               };
+            }
 
-              const existingYearIndex = purchasedDetails[courseId].years.findIndex(
-                (y: any) => y.yearId === item.year?.yearId
-              );
-              if (existingYearIndex === -1) {
-                purchasedDetails[courseId].years.push(yearData);
-              } else {
-                purchasedDetails[courseId].years[existingYearIndex] = yearData;
-              }
-              const startVid = getStartingVideo(year, "Year");
+            const selectedModule = moduleId
+              ? item.year.modules.find((m: any) => m.moduleId === moduleId)
+              : item.year.modules?.[0];
+
+            const selectedMonth = monthId
+              ? selectedModule?.months.find((m: any) => m.monthId === monthId)
+              : selectedModule?.months?.[0];
+
+            const yearData = {
+              yearId: item.year.yearId,
+              yearName: item.year.yearName,
+              modules: item.year.modules,
+              exams: item.year.exams || [],
+            };
+
+            const existingYearIndex = purchasedDetails[courseId].years.findIndex(
+              (y: any) => y.yearId === item.year.yearId
+            );
+            if (existingYearIndex === -1) {
+              purchasedDetails[courseId].years.push(yearData);
+            } else {
+              purchasedDetails[courseId].years[existingYearIndex] = yearData;
+            }
+
+            const startVid = getStartingVideo(item, "Year");
+            if (startVid) startingVideos.push(startVid);
+            break;
+          }
+
+          case "Module": {
+            if (!item.module || !item.module.course || !item.module.year) break;
+            const courseId = item.module.course.courseId;
+
+            if (!purchasedDetails[courseId]) {
+              purchasedDetails[courseId] = {
+                courseName: item.module.course.courseName,
+                years: [],
+              };
+            }
+
+            let yearIndex = purchasedDetails[courseId].years.findIndex(
+              (y: any) => y.yearId === item.module.year.yearId
+            );
+            if (yearIndex === -1) {
+              purchasedDetails[courseId].years.push({
+                yearId: item.module.year.yearId,
+                yearName: item.module.year.yearName,
+                modules: [],
+              });
+              yearIndex = purchasedDetails[courseId].years.length - 1;
+            }
+
+            const selectedMonth = monthId
+              ? item.module.months.find((m: any) => m.monthId === monthId)
+              : item.module.months?.[0];
+
+            const moduleData = {
+              moduleId: item.module.moduleId,
+              moduleName: item.module.moduleName,
+              months: item.module.months
+            };
+
+            const existingModuleIndex = purchasedDetails[courseId].years[yearIndex].modules.findIndex(
+              (m: any) => m.moduleId === item.module.moduleId
+            );
+            if (existingModuleIndex === -1) {
+              purchasedDetails[courseId].years[yearIndex].modules.push(moduleData);
+            } else {
+              purchasedDetails[courseId].years[yearIndex].modules[existingModuleIndex] = moduleData;
+            }
+
+            if (moduleId == 1) {
+              const startVid = getStartingVideo(item, "Module");
+              if (startVid) startingVideos.push(startVid);
+              break;
+            }
+          }
+
+          case "Month": {
+            if (!item.month || !item.month.course || !item.month.year || !item.month.module) break;
+            const courseId = item.month.course.courseId;
+
+            if (!purchasedDetails[courseId]) {
+              purchasedDetails[courseId] = {
+                courseName: item.month.course.courseName,
+                years: [],
+              };
+            }
+
+            let yearIndex = purchasedDetails[courseId].years.findIndex(
+              (y: any) => y.yearId === item.month.year.yearId
+            );
+            if (yearIndex === -1) {
+              purchasedDetails[courseId].years.push({
+                yearId: item.month.year.yearId,
+                yearName: item.month.year.yearName,
+                modules: [],
+              });
+              yearIndex = purchasedDetails[courseId].years.length - 1;
+            }
+
+            let moduleIndex = purchasedDetails[courseId].years[yearIndex].modules.findIndex(
+              (m: any) => m.moduleId === item.month.module.moduleId
+            );
+            if (moduleIndex === -1) {
+              purchasedDetails[courseId].years[yearIndex].modules.push({
+                moduleId: item.month.module.moduleId,
+                moduleName: item.month.module.moduleName,
+                months: [],
+              });
+              moduleIndex = purchasedDetails[courseId].years[yearIndex].modules.length - 1;
+            }
+
+            const monthData = {
+              monthId: item.month.monthId,
+              monthName: item.month.monthName,
+              videos: item.month.videos,
+            };
+
+            const existingMonthIndex = purchasedDetails[courseId].years[yearIndex].modules[moduleIndex].months.findIndex(
+              (m: any) => m.monthId === item.month.monthId
+            );
+            if (existingMonthIndex === -1) {
+              purchasedDetails[courseId].years[yearIndex].modules[moduleIndex].months.push(monthData);
+            } else {
+              purchasedDetails[courseId].years[yearIndex].modules[moduleIndex].months[existingMonthIndex] = monthData;
+            }
+
+            if (monthId == 1) {
+              const startVid = getStartingVideo(item, "Month");
               if (startVid) startingVideos.push(startVid);
             }
             break;
           }
-          case "Module": {
-            const modules = item.module
-            if (item.module && item.module.course && item.module.year) {
-              const courseId = item.module.course.courseId;
-              if (!purchasedDetails[courseId]) {
-                purchasedDetails[courseId] = {
-                  courseName: item.module.course.courseName,
-                  years: []
-                };
-              }
 
-              let yearIndex = purchasedDetails[courseId].years.findIndex(
-                (y: any) => y.yearId === item.module?.year.yearId
-              );
-
-              if (yearIndex === -1) {
-                purchasedDetails[courseId].years.push({
-                  yearId: item.module.year.yearId,
-                  yearName: item.module.year.yearName,
-                  modules: []
-                });
-                yearIndex = purchasedDetails[courseId].years.length - 1;
-              }
-
-              const moduleData = {
-                moduleId: item.module.moduleId,
-                moduleName: item.module.moduleName,
-                months: item.module.months.map((month: any) => ({
-                  monthId: month.monthId,
-                  monthName: month.monthName,
-                  videos: month.videos.map((video: any) => ({
-                    videoId: video.videoId,
-                    videoVimeoId: video.videoVimeoId,
-                    videoTitle: video.videoTitle,
-                    videoUrl: video.videoUrl,
-                    description: video.description,
-                    duration: video.duration,
-                    thumbnailUrl: video.thumbnailUrl
-                  }))
-                }))
-              };
-
-              const existingModuleIndex = purchasedDetails[courseId].years[yearIndex].modules.findIndex(
-                (m: any) => m.moduleId === item.module?.moduleId
-              );
-              if (existingModuleIndex === -1) {
-                purchasedDetails[courseId].years[yearIndex].modules.push(moduleData);
-              } else {
-                purchasedDetails[courseId].years[yearIndex].modules[existingModuleIndex] = moduleData;
-              }
-            }
-            const startVid = getStartingVideo(modules, "Module");
-            if (startVid) startingVideos.push(startVid);
-            break;
-          }
-          case "Month": {
-            const month = item.month
-            if (item.month && item.month.course && item.month.year && item.month.module) {
-              const courseId = item.month.course.courseId;
-              if (!purchasedDetails[courseId]) {
-                purchasedDetails[courseId] = {
-                  courseName: item.month.course.courseName,
-                  years: []
-                };
-              }
-
-              let yearIndex = purchasedDetails[courseId].years.findIndex(
-                (y: any) => y.yearId === item.month?.year.yearId
-              );
-
-              if (yearIndex === -1) {
-                purchasedDetails[courseId].years.push({
-                  yearId: item.month.year.yearId,
-                  yearName: item.month.year.yearName,
-                  modules: []
-                });
-                yearIndex = purchasedDetails[courseId].years.length - 1;
-              }
-
-              let moduleIndex = purchasedDetails[courseId].years[yearIndex].modules.findIndex(
-                (m: any) => m.moduleId === item.month?.module.moduleId
-              );
-
-              if (moduleIndex === -1) {
-                purchasedDetails[courseId].years[yearIndex].modules.push({
-                  moduleId: item.month.module.moduleId,
-                  moduleName: item.month.module.moduleName,
-                  months: []
-                });
-                moduleIndex = purchasedDetails[courseId].years[yearIndex].modules.length - 1;
-              }
-
-              const monthData = {
-                monthId: item.month.monthId,
-                monthName: item.month.monthName,
-                videos: item.month.videos.map((video: any) => ({
-                  videoId: video.videoId,
-                  videoVimeoId: video.videoVimeoId,
-                  videoTitle: video.videoTitle,
-                  videoUrl: video.videoUrl,
-                  description: video.description,
-                  duration: video.duration,
-                  thumbnailUrl: video.thumbnailUrl
-                }))
-              };
-
-              const existingMonthIndex = purchasedDetails[courseId].years[yearIndex].modules[moduleIndex].months.findIndex(
-                (m: any) => m.monthId === item.month?.monthId
-              );
-              if (existingMonthIndex === -1) {
-                purchasedDetails[courseId].years[yearIndex].modules[moduleIndex].months.push(monthData);
-              } else {
-                purchasedDetails[courseId].years[yearIndex].modules[moduleIndex].months[existingMonthIndex] = monthData;
-              }
-            }
-            const startVid = getStartingVideo(month, "Month");
-            if (startVid) startingVideos.push(startVid);
-            break;
-          }
           default:
             console.warn("Unknown item type:", item.itemType);
         }
@@ -551,6 +761,40 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
     }
 
     res.status(200).json({ user, orders: purchasedDetails });
+
+  } catch (error) {
+    console.error('Error in getUserProfile:', error);
+    throw new ApiError(500, 'Internal Server Error');
+  }
+};
+
+export const getUserProfileLastPurchase = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user || !req.user.userId) {
+      throw new ApiError(401, 'Unauthorized');
+    }
+    const userId = req.user.userId;
+
+    // Fetch user with profile
+    const user: UserWithProfile | undefined = await db.query.users.findFirst({
+      where: eq(users.userId, userId),
+      columns: { password: false },
+      with: { profile: { columns: { userId: false } } },
+    });
+
+    if (!user) throw new ApiError(404, 'User not found');
+
+    // Fetch user's orders along with courses, years, modules, months, videos
+    const userOrders = await db.query.orders.findMany({
+      where: (orders, { eq }) => eq(orders.userId, userId),
+      with: {
+        orderItems: {
+          columns: { itemType: true, itemName: true },
+        }
+      }
+    });
+
+    res.status(200).json({ user, orders: userOrders });
 
   } catch (error) {
     console.error('Error in getUserProfile:', error);

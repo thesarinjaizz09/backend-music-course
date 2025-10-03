@@ -47,7 +47,6 @@ const createCheckoutSession = async (req: Request, res: Response): Promise<void>
 }
 
 const handleStripeWebhook = async (req: Request, res: Response) => {
-    
     const signature = req.headers["stripe-signature"]!;
     const stripePayload = (req as any).rawBody || req.body;
     try {
